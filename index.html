@@ -6,9 +6,6 @@
 <title>getrank</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#1B140F;
@@ -163,6 +160,15 @@ tr:last-child td{border-bottom:none;}
 .expense-line{display:flex;gap:8px;align-items:end;margin-bottom:8px;flex-wrap:wrap;}
 .expense-line .field{margin-bottom:0;flex:1;min-width:110px;}
 .expense-line .amt{min-width:90px;flex:0 0 auto;color:var(--text-muted);font-size:.85rem;padding-bottom:10px;}
+.item-search-wrap{position:relative;}
+.item-search-results{
+  position:absolute;top:calc(100% + 4px);inset-inline-start:0;inset-inline-end:0;z-index:20;
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-s);
+  box-shadow:var(--shadow);max-height:220px;overflow-y:auto;
+}
+.item-search-result{padding:9px 12px;font-size:.88rem;cursor:pointer;}
+.item-search-result:hover,.item-search-result.hl{background:var(--surface-2);}
+.item-search-empty{padding:10px 12px;font-size:.82rem;color:var(--text-muted);}
 .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
 .modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-l);padding:24px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow);}
 .modal h3{margin-bottom:16px;}
@@ -207,6 +213,22 @@ tr:last-child td{border-bottom:none;}
 </head>
 <body>
 
+<div id="fatal-error" style="display:none;position:fixed;inset:0;background:#1B140F;color:#F3E9DD;font-family:sans-serif;padding:30px;z-index:9999;overflow:auto;direction:ltr;text-align:left;"></div>
+<script>
+window.addEventListener('error', function(ev){
+  var box = document.getElementById('fatal-error');
+  if(!box) return;
+  box.style.display='block';
+  box.innerHTML += '<div style="margin-bottom:14px;padding:12px;border:1px solid #D4695A;border-radius:8px;"><b>Error:</b> '+ (ev.message||'unknown') +'<br><small>'+ (ev.filename||'') +':'+ (ev.lineno||'') +'</small></div>';
+});
+window.addEventListener('unhandledrejection', function(ev){
+  var box = document.getElementById('fatal-error');
+  if(!box) return;
+  box.style.display='block';
+  var msg = ev.reason && ev.reason.message ? ev.reason.message : JSON.stringify(ev.reason);
+  box.innerHTML += '<div style="margin-bottom:14px;padding:12px;border:1px solid #D4695A;border-radius:8px;"><b>Promise error:</b> '+ msg +'</div>';
+});
+</script>
 <div id="login-screen"></div>
 <div id="app-shell" style="display:none;">
   <nav id="sidebar"></nav>
@@ -262,6 +284,7 @@ ar:{
   currency_eur:"يورو", monthly_report:"التقرير الشهري", print_report:"طباعة التقرير",
   daily_report:"تقرير يومي", print_daily:"طباعة/PDF يومي", items_bought:"السلع التي تم جلبها",
   income_of_day:"مدخول اليوم", net_after_items:"الصافي بعد نقص السلع", no_items_today:"لم يتم تسجيل سلع لهذا اليوم",
+  search_item_ph:"اكتب لتبحث عن سلعة...", no_matches:"لا توجد نتائج",
   generated_on:"تاريخ الإصدار", total_income_period:"إجمالي الدخل", total_expenses_period:"إجمالي المصاريف",
   net_period:"الصافي", entries_count:"عدد الإدخالات", welcome_empty:"ابدأ بإضافة أول إدخال يومي لمقهاك",
   go_add_entry:"إضافة إدخال", locked_title:"تم قفل الجلسة", locked_sub:"لعدم النشاط لفترة، الرجاء إعادة إدخال كلمة السر",
@@ -304,6 +327,7 @@ fr:{
   currency_eur:"Euro", monthly_report:"Rapport mensuel", print_report:"Imprimer le rapport",
   daily_report:"Rapport journalier", print_daily:"Imprimer/PDF du jour", items_bought:"Articles achetés",
   income_of_day:"Revenu du jour", net_after_items:"Net après déduction des articles", no_items_today:"Aucun article enregistré ce jour-là",
+  search_item_ph:"Tapez pour chercher un article...", no_matches:"Aucun résultat",
   generated_on:"Généré le", total_income_period:"Revenu total", total_expenses_period:"Dépenses totales",
   net_period:"Net", entries_count:"Nombre de saisies", welcome_empty:"Ajoutez votre première saisie journalière",
   go_add_entry:"Ajouter une saisie", locked_title:"Session verrouillée", locked_sub:"Inactivité détectée, veuillez ressaisir le mot de passe",
@@ -346,6 +370,7 @@ en:{
   currency_eur:"Euro", monthly_report:"Monthly report", print_report:"Print report",
   daily_report:"Daily report", print_daily:"Print/PDF today", items_bought:"Items purchased",
   income_of_day:"Day's income", net_after_items:"Net after items", no_items_today:"No items recorded for this day",
+  search_item_ph:"Type to search an item...", no_matches:"No matches",
   generated_on:"Generated on", total_income_period:"Total income", total_expenses_period:"Total expenses",
   net_period:"Net", entries_count:"Entries count", welcome_empty:"Start by adding your first daily entry",
   go_add_entry:"Add entry", locked_title:"Session locked", locked_sub:"Due to inactivity, please re-enter the password",
@@ -366,11 +391,23 @@ let state = {
 let inactivityTimer=null;
 let chartNet=null, chartPie=null;
 
-/* ---------------- Storage helpers ----------------
-   Primary storage: Firebase Firestore (free tier) — syncs your data
-   across every device/browser you log into with the same password.
-   A localStorage cache is kept alongside it so the app still works
-   instantly and offline; it re-syncs to the cloud once back online. */
+/* ---------------- Background script loading ----------------
+   Chart.js and Firebase are loaded dynamically in the background so the
+   login screen appears instantly, even on a slow connection. Anything
+   that needs them (charts, cloud sync) waits on these promises instead
+   of blocking initial page load. */
+function loadScript(src){
+  return new Promise((resolve,reject)=>{
+    const s = document.createElement('script');
+    s.src = src; s.onload = ()=>resolve(); s.onerror = ()=>reject(new Error('failed to load '+src));
+    document.head.appendChild(s);
+  });
+}
+function delay(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+const chartJsPromise = loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js')
+  .catch(e=>{ console.error('Chart.js failed to load', e); });
+
 const firebaseConfig = {
   apiKey: "AIzaSyAn5-SF8nqhqauhBcEf6KaOKvzdjVvoSiM",
   authDomain: "getrank-inventory.firebaseapp.com",
@@ -380,6 +417,25 @@ const firebaseConfig = {
   appId: "1:390895831461:web:4167c215209cdd40d2004c",
   measurementId: "G-DR2QR1E88H"
 };
+let cloudReady = false;
+let cloudDocRef = null;
+const firebaseReadyPromise = (async function(){
+  try{
+    await loadScript('https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js');
+    await loadScript('https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js');
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    try{ await db.enablePersistence({synchronizeTabs:true}); }catch(e){}
+    cloudDocRef = db.collection('getrank').doc('cafe');
+    cloudReady = true;
+  }catch(e){ console.error('Firebase failed to load — working locally only.', e); cloudReady=false; }
+})();
+
+/* ---------------- Storage helpers ----------------
+   Primary storage: Firebase Firestore (free tier) — syncs your data
+   across every device/browser you log into with the same password.
+   A localStorage cache is kept alongside it so the app still works
+   instantly and offline; it re-syncs to the cloud once back online. */
 const memoryFallback = {};
 let storageBackend = 'local';
 try{
@@ -387,18 +443,6 @@ try{
   window.localStorage.setItem(testKey,'1');
   window.localStorage.removeItem(testKey);
 }catch(e){ storageBackend='memory'; }
-
-let cloudReady = false;
-let cloudDocRef = null;
-try{
-  if(window.firebase && firebaseConfig.apiKey){
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
-    cloudDocRef = db.collection('getrank').doc('cafe');
-    cloudReady = true;
-  }
-}catch(e){ console.error('firebase init failed', e); cloudReady = false; }
 
 async function storeGet(key){
   // Local cache first, so the UI is instant; cloud value (if reachable) wins and re-syncs the cache.
@@ -408,6 +452,7 @@ async function storeGet(key){
     else { const raw = window.localStorage.getItem(key); local = raw? JSON.parse(raw): null; }
   }catch(e){ local = null; }
 
+  if(!cloudReady) await Promise.race([firebaseReadyPromise, delay(6000)]);
   if(cloudReady){
     try{
       const snap = await cloudDocRef.get();
@@ -428,11 +473,18 @@ async function storeSet(key,val){
     if(storageBackend==='memory') memoryFallback[key]=val;
     else window.localStorage.setItem(key, JSON.stringify(val));
   }catch(e){ console.error('local cache write error',e); }
+  if(!cloudReady) await Promise.race([firebaseReadyPromise, delay(6000)]);
   if(cloudReady){
     try{ await cloudDocRef.set({[key]:val},{merge:true}); return true; }
     catch(e){ console.error('cloud set error, saved locally only', e); return false; }
   }
   return true;
+}
+function syncLocalDefaults(){
+  try{
+    const raw = window.localStorage.getItem('getrank:settings');
+    if(raw){ const s = JSON.parse(raw); state.lang=s.lang||state.lang; state.currency=s.currency||state.currency; state.goal=s.goal||state.goal; state.theme=s.theme||state.theme; }
+  }catch(e){}
 }
 async function loadAll(){
   const [settings,catalog,suppliers,entries] = await Promise.all([
@@ -681,8 +733,12 @@ function renderDashboard(){
   document.getElementById('today-pdf') && (document.getElementById('today-pdf').onclick=()=>exportDailyPDF(s.todayEntry.id));
 
   if(s.entries.length){
-    drawNetChart(s.entries);
-    if(s.topExpenses.length) drawPieChart(s.topExpenses);
+    if(typeof Chart==='undefined'){
+      chartJsPromise.then(()=>{ if(state.view==='dashboard' && typeof Chart!=='undefined') renderDashboard(); });
+    } else {
+      drawNetChart(s.entries);
+      if(s.topExpenses.length) drawPieChart(s.topExpenses);
+    }
   }
 }
 
@@ -778,7 +834,7 @@ function renderEntry(){
     </div>
   `;
   renderExpenseLines();
-  document.getElementById('add-line').onclick=()=>{ if(state.catalog.length===0){toast(t('no_items_yet')); return;} state.expenseDraft.push({itemId:state.catalog[0].id, name:state.catalog[0].name, qty:1, unitPrice:0, amount:0}); renderExpenseLines(); };
+  document.getElementById('add-line').onclick=()=>{ if(state.catalog.length===0){toast(t('no_items_yet')); return;} state.expenseDraft.push({itemId:null, name:'', qty:1, unitPrice:0, amount:0}); renderExpenseLines(); };
   document.getElementById('f-income').oninput = updateNetPreview;
   document.getElementById('cancel-edit') && (document.getElementById('cancel-edit').onclick=()=>{ resetEntryDraft(); state.view='history'; render(); });
   document.getElementById('save-entry').onclick=saveEntry;
@@ -789,9 +845,10 @@ function renderExpenseLines(){
   const wrap = document.getElementById('expense-lines');
   wrap.innerHTML = state.expenseDraft.map((line,idx)=>`
     <div class="expense-line" data-idx="${idx}">
-      <div class="field">
+      <div class="field item-search-wrap">
         <label>${t('item')}</label>
-        <select class="ex-item">${state.catalog.map(c=>`<option value="${c.id}" ${c.id===line.itemId?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select>
+        <input type="text" class="ex-item-search" autocomplete="off" placeholder="${t('search_item_ph')}" value="${escapeHtml(line.name||'')}" data-item-id="${line.itemId||''}">
+        <div class="item-search-results" style="display:none;"></div>
       </div>
       <div class="field" style="max-width:90px;">
         <label>${t('qty')}</label>
@@ -807,7 +864,34 @@ function renderExpenseLines(){
   `).join('');
   wrap.querySelectorAll('.expense-line').forEach(row=>{
     const idx = +row.dataset.idx;
-    row.querySelector('.ex-item').onchange=(e)=>{ const item=state.catalog.find(c=>c.id===e.target.value); state.expenseDraft[idx].itemId=item.id; state.expenseDraft[idx].name=item.name; recalcLine(idx); };
+    const input = row.querySelector('.ex-item-search');
+    const results = row.querySelector('.item-search-results');
+    function showResults(query){
+      const q = (query||'').trim().toLowerCase();
+      const matches = q? state.catalog.filter(c=>c.name.toLowerCase().includes(q)) : state.catalog;
+      if(matches.length===0){
+        results.innerHTML = `<div class="item-search-empty">${t('no_matches')}</div>`;
+      } else {
+        results.innerHTML = matches.slice(0,30).map(c=>`<div class="item-search-result" data-id="${c.id}">${escapeHtml(c.name)}${c.category? ` <span class="tag">${escapeHtml(c.category)}</span>`:''}</div>`).join('');
+      }
+      results.style.display='block';
+      results.querySelectorAll('.item-search-result').forEach(opt=>{
+        opt.onmousedown=(ev)=>{ // mousedown fires before blur, so selection registers before the list hides
+          ev.preventDefault();
+          const item = state.catalog.find(c=>c.id===opt.dataset.id);
+          if(!item) return;
+          state.expenseDraft[idx].itemId = item.id;
+          state.expenseDraft[idx].name = item.name;
+          input.value = item.name;
+          input.dataset.itemId = item.id;
+          results.style.display='none';
+          recalcLine(idx);
+        };
+      });
+    }
+    input.onfocus=()=> showResults(input.value);
+    input.oninput=()=>{ state.expenseDraft[idx].itemId=null; showResults(input.value); };
+    input.onblur=()=> setTimeout(()=>{ results.style.display='none'; }, 150);
     row.querySelector('.ex-qty').oninput=(e)=>{ state.expenseDraft[idx].qty=parseFloat(e.target.value)||0; recalcLine(idx); };
     row.querySelector('.ex-price').oninput=(e)=>{ state.expenseDraft[idx].unitPrice=parseFloat(e.target.value)||0; recalcLine(idx); };
     row.querySelector('.ex-remove').onclick=()=>{ state.expenseDraft.splice(idx,1); renderExpenseLines(); updateNetPreview(); };
@@ -1094,16 +1178,25 @@ function render(){
 async function boot(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-shell').style.display='flex';
+  renderSidebar();
+  document.getElementById('main').innerHTML = `<div class="empty-state" style="padding-top:80px;"><div class="big">&#9749;</div><p>${t('login_sub')}</p></div>`;
+  try{ await loadAll(); }catch(e){ console.error('loadAll failed', e); }
   resetInactivity();
   render();
   if(storageBackend==='memory'){
     setTimeout(()=> toast(state.lang==='ar' ? 'تنبيه: التخزين غير متاح في هذا المتصفح، لن يتم حفظ البيانات' : (state.lang==='fr' ? "Avertissement : stockage indisponible, les données ne seront pas sauvegardées" : "Warning: storage unavailable, data won't be saved")), 600);
   }
 }
-(async function init(){
-  await loadAll();
-  applyDir();
-  renderLogin(false);
+(function init(){
+  try{
+    syncLocalDefaults();
+    applyDir();
+    renderLogin(false);
+  }catch(e){
+    console.error('init failed', e);
+    var box = document.getElementById('fatal-error');
+    if(box){ box.style.display='block'; box.innerHTML += '<div style="padding:12px;border:1px solid #D4695A;border-radius:8px;"><b>Init error:</b> '+ (e.message||e) +'</div>'; }
+  }
 })();
 </script>
 </body>
