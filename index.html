@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>getrank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#1B140F;
+  --surface:#241A13;
+  --surface-2:#2E2118;
+  --border:#3B2C20;
+  --text:#F3E9DD;
+  --text-muted:#B8A594;
+  --accent:#E0954A;
+  --accent-2:#8FA06E;
+  --pos:#6FAE7C;
+  --neg:#D4695A;
+  --info:#7FA8C9;
+  --radius-s:6px;
+  --radius-m:12px;
+  --radius-l:18px;
+  --shadow: 0 8px 24px rgba(0,0,0,.35);
+}
+[data-theme="light"]{
+  --bg:#FBF7F0;
+  --surface:#FFFFFF;
+  --surface-2:#F3EBDD;
+  --border:#E4D8C4;
+  --text:#2A1D12;
+  --text-muted:#7C6A57;
+  --accent:#B5702A;
+  --accent-2:#5E7847;
+  --pos:#3E8A55;
+  --neg:#B5432F;
+  --info:#3E6C8E;
+  --shadow: 0 8px 24px rgba(60,40,20,.12);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Cairo',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  font-variant-numeric: tabular-nums;
+  transition:background .25s ease,color .25s ease;
+}
+[dir="rtl"] body{direction:rtl;}
+[dir="ltr"] body{direction:ltr;}
+h1,h2,h3,h4{margin:0;font-weight:800;}
+p{margin:0;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;font-size:1em;}
+input,select,textarea{font-family:inherit;background:var(--surface-2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius-s);padding:10px 12px;font-size:.95rem;width:100%;}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:1px;}
+label{font-size:.8rem;color:var(--text-muted);display:block;margin-bottom:4px;}
+.field{margin-bottom:14px;}
+a{color:var(--accent);}
+::selection{background:var(--accent);color:#1B140F;}
+
+/* ---------- Login ---------- */
+#login-screen{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(224,149,74,.18), transparent 45%),
+    radial-gradient(circle at 80% 85%, rgba(143,160,110,.14), transparent 40%),
+    var(--bg);
+  padding:20px;
+}
+.login-card{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-l);
+  padding:40px 32px;width:100%;max-width:380px;box-shadow:var(--shadow);text-align:center;
+}
+.login-mark{
+  width:58px;height:58px;border-radius:16px;margin:0 auto 18px;
+  background:linear-gradient(135deg,var(--accent),#8a5424);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:1.5rem;color:#1B140F;
+}
+.login-card h1{font-size:1.5rem;margin-bottom:6px;letter-spacing:.5px;}
+.login-sub{color:var(--text-muted);font-size:.9rem;margin-bottom:26px;}
+.login-error{color:var(--neg);font-size:.85rem;min-height:18px;margin-top:8px;}
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  padding:11px 20px;border-radius:var(--radius-s);font-weight:700;font-size:.92rem;
+  background:var(--accent);color:#1B140F;transition:transform .15s ease, filter .15s ease;
+}
+.btn:hover{filter:brightness(1.08);}
+.btn:active{transform:scale(.97);}
+.btn-ghost{background:transparent;color:var(--text);border:1px solid var(--border);}
+.btn-danger{background:var(--neg);color:#fff;}
+.btn-sm{padding:7px 12px;font-size:.8rem;}
+.btn-block{width:100%;}
+.lang-row{display:flex;gap:8px;justify-content:center;margin-top:22px;}
+.lang-pill{padding:5px 12px;border-radius:20px;border:1px solid var(--border);font-size:.78rem;color:var(--text-muted);}
+.lang-pill.active{border-color:var(--accent);color:var(--accent);}
+
+/* ---------- Shell ---------- */
+#app-shell{display:flex;min-height:100vh;}
+#sidebar{
+  width:220px;flex-shrink:0;background:var(--surface);border-inline-end:1px solid var(--border);
+  display:flex;flex-direction:column;padding:20px 14px;gap:4px;
+}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 8px 22px;}
+.brand-mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#8a5424);display:flex;align-items:center;justify-content:center;font-weight:900;color:#1B140F;flex-shrink:0;}
+.brand-name{font-weight:800;font-size:1.05rem;}
+.nav-item{
+  display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:var(--radius-s);
+  color:var(--text-muted);font-weight:600;font-size:.9rem;text-align:start;
+}
+.nav-item:hover{background:var(--surface-2);color:var(--text);}
+.nav-item.active{background:var(--accent);color:#1B140F;}
+.nav-icon{width:18px;text-align:center;flex-shrink:0;}
+.sidebar-foot{margin-top:auto;display:flex;flex-direction:column;gap:8px;}
+#main{flex:1;min-width:0;padding:26px 30px 60px;}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap;}
+.topbar h2{font-size:1.4rem;}
+.topbar-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+#mobile-nav{display:none;}
+
+/* ---------- Cards / grid ---------- */
+.grid{display:grid;gap:16px;}
+.grid-4{grid-template-columns:repeat(4,1fr);}
+.grid-2{grid-template-columns:repeat(2,1fr);}
+.grid-3{grid-template-columns:repeat(3,1fr);}
+@media(max-width:1000px){.grid-4{grid-template-columns:repeat(2,1fr);} .grid-3{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:640px){.grid-4,.grid-3,.grid-2{grid-template-columns:1fr;}}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);padding:18px 20px;}
+.stat-card{display:flex;flex-direction:column;gap:6px;}
+.stat-label{font-size:.78rem;color:var(--text-muted);font-weight:600;}
+.stat-value{font-size:1.55rem;font-weight:800;}
+.stat-sub{font-size:.76rem;color:var(--text-muted);}
+.stat-sub.pos{color:var(--pos);}
+.stat-sub.neg{color:var(--neg);}
+.card-title{font-size:.95rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+
+.alert{display:flex;gap:10px;align-items:flex-start;padding:13px 15px;border-radius:var(--radius-s);border:1px solid var(--border);background:var(--surface-2);font-size:.85rem;margin-bottom:10px;}
+.alert-icon{flex-shrink:0;font-size:1.1rem;}
+.alert.warn{border-color:#5a4020;background:rgba(224,149,74,.10);}
+.alert.good{border-color:#2f4f36;background:rgba(111,174,124,.10);}
+
+table{width:100%;border-collapse:collapse;font-size:.85rem;}
+th,td{padding:10px 8px;text-align:start;border-bottom:1px solid var(--border);}
+th{color:var(--text-muted);font-weight:700;font-size:.75rem;text-transform:uppercase;letter-spacing:.4px;}
+tr:last-child td{border-bottom:none;}
+.table-wrap{overflow-x:auto;}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;background:var(--surface-2);font-size:.72rem;color:var(--text-muted);}
+.row-actions{display:flex;gap:6px;}
+.icon-btn{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:var(--surface-2);color:var(--text-muted);}
+.icon-btn:hover{color:var(--text);}
+
+.chart-box{position:relative;height:260px;}
+.chart-box.small{height:200px;}
+
+.form-row{display:flex;gap:12px;flex-wrap:wrap;}
+.form-row>.field{flex:1;min-width:150px;}
+.expense-line{display:flex;gap:8px;align-items:end;margin-bottom:8px;flex-wrap:wrap;}
+.expense-line .field{margin-bottom:0;flex:1;min-width:110px;}
+.expense-line .amt{min-width:90px;flex:0 0 auto;color:var(--text-muted);font-size:.85rem;padding-bottom:10px;}
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:50;padding:20px;}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-l);padding:24px;width:100%;max-width:480px;max-height:88vh;overflow-y:auto;box-shadow:var(--shadow);}
+.modal h3{margin-bottom:16px;}
+.empty-state{text-align:center;padding:40px 20px;color:var(--text-muted);}
+.empty-state .big{font-size:2rem;margin-bottom:8px;}
+.pill-toggle{display:flex;gap:6px;background:var(--surface-2);padding:4px;border-radius:20px;border:1px solid var(--border);}
+.pill-toggle button{padding:6px 13px;border-radius:16px;font-size:.78rem;color:var(--text-muted);font-weight:600;}
+.pill-toggle button.active{background:var(--accent);color:#1B140F;}
+
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
+.cal-cell{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.68rem;color:var(--text-muted);background:var(--surface-2);}
+.cal-cell.pos{background:rgba(111,174,124,.35);color:var(--text);}
+.cal-cell.neg{background:rgba(212,105,90,.35);color:var(--text);}
+.cal-cell.empty{background:transparent;}
+
+.search-bar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+.search-bar input{max-width:280px;}
+
+#toast-wrap{position:fixed;bottom:20px;inset-inline-end:20px;z-index:100;display:flex;flex-direction:column;gap:8px;}
+.toast{background:var(--surface);border:1px solid var(--border);padding:12px 16px;border-radius:var(--radius-s);box-shadow:var(--shadow);font-size:.85rem;min-width:200px;}
+
+.print-only{display:none;}
+@media print{
+  #sidebar,#mobile-nav,.topbar-actions,.no-print{display:none !important;}
+  #main{padding:0;}
+  body{background:#fff;color:#000;}
+  .print-only{display:block;}
+  .card{border:1px solid #ccc;box-shadow:none;}
+}
+
+@media(max-width:820px){
+  #sidebar{display:none;}
+  #main{padding:16px 14px 90px;}
+  #mobile-nav{
+    display:flex;position:fixed;bottom:0;inset-inline:0;background:var(--surface);border-top:1px solid var(--border);
+    padding:8px 4px;justify-content:space-around;z-index:40;
+  }
+  .mobile-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:.62rem;color:var(--text-muted);padding:4px 6px;}
+  .mobile-nav-item.active{color:var(--accent);}
+}
+</style>
+</head>
+<body>
+
+<div id="login-screen"></div>
+<div id="app-shell" style="display:none;">
+  <nav id="sidebar"></nav>
+  <main id="main"></main>
+  <nav id="mobile-nav"></nav>
+</div>
+<div id="toast-wrap"></div>
+
+<script>
+/* ============================================================
+   GETRANK — Café income/expense dashboard
+   Single-file app. Data persisted via window.storage (personal).
+   ============================================================ */
+
+const APP_PASSWORD = "getrank@210";
+const AUTOLOCK_MS = 10*60*1000;
+
+/* ---------------- i18n ---------------- */
+const I18N = {
+ar:{
+  dir:"rtl", currency_default:"MAD",
+  app_name:"getrank", login_title:"مرحباً بعودتك", login_sub:"أدخل كلمة السر للوصول إلى لوحة تحكم المقهى",
+  password:"كلمة السر", enter:"دخول", wrong_pass:"كلمة السر غير صحيحة",
+  nav_dashboard:"الرئيسية", nav_entry:"إدخال يومي", nav_history:"السجل", nav_catalog:"السلع",
+  nav_suppliers:"الموردون", nav_settings:"الإعدادات", logout:"تسجيل الخروج",
+  today_income:"دخل اليوم", today_expenses:"مصاريف اليوم", today_net:"صافي اليوم", month_net:"صافي الشهر",
+  profit_margin:"هامش الربح", avg_daily:"المتوسط اليومي", avg_weekly:"المتوسط الأسبوعي",
+  best_day:"أفضل يوم", worst_day:"أسوأ يوم", streak:"أيام ربح متتالية",
+  net_over_time:"تطور الصافي", expense_breakdown:"توزيع المصاريف حسب السلعة",
+  top_expenses:"أكثر السلع استهلاكاً للميزانية", monthly_goal:"هدف الدخل الشهري",
+  goal_progress:"من الهدف", no_goal:"لم يتم تحديد هدف بعد. اذهب إلى الإعدادات لتحديده.",
+  spike_alert:"تنبيه: مصاريف اليوم أعلى من المعتاد بنسبة", vs_last_period:"مقارنة بالفترة السابقة",
+  forecast:"توقع دخل الشهر القادم", calendar_view:"التقويم الأدائي",
+  add_entry:"إضافة إدخال اليوم", date:"التاريخ", total_income:"إجمالي المدخول",
+  expenses_section:"المصاريف (السلع)", add_expense_line:"إضافة سلعة", item:"السلعة", qty:"الكمية",
+  unit_price:"سعر الوحدة", amount:"المبلغ", note:"ملاحظة", note_ph:"سبب أي تغيّر غير عادي (اختياري)",
+  net_result:"الصافي المحسوب", save_entry:"حفظ الإدخال", entry_saved:"تم حفظ الإدخال",
+  select_item:"اختر سلعة", no_items_yet:"لا توجد سلع بعد، أضفها من صفحة السلع أولاً",
+  history_title:"سجل الأيام", search_ph:"ابحث بالتاريخ أو الملاحظة...", export_csv:"تصدير CSV",
+  export_pdf:"تصدير PDF", col_date:"التاريخ", col_income:"الدخل", col_expenses:"المصاريف",
+  col_net:"الصافي", col_margin:"الهامش", col_actions:"إجراءات", edit:"تعديل", delete:"حذف",
+  confirm_delete:"هل أنت متأكد من الحذف؟", no_entries:"لا توجد إدخالات مسجلة بعد",
+  catalog_title:"كتالوج السلع", add_item:"إضافة سلعة جديدة", item_name:"اسم السلعة", category:"الفئة (اختياري)",
+  price_history:"سجل الأسعار", no_price_history:"لا يوجد سجل أسعار بعد", item_saved:"تم حفظ السلعة",
+  no_catalog:"لا توجد سلع في الكتالوج. أضف أول سلعة للبدء.",
+  suppliers_title:"دفتر الموردين", add_supplier:"إضافة مورّد", supplier_name:"الاسم", phone:"رقم الهاتف",
+  email:"البريد الإلكتروني (اختياري)", item_types:"نوع السلع الموفرة", linked_items:"السلع المرتبطة",
+  supplier_notes:"ملاحظات", no_suppliers:"لا يوجد موردون بعد. أضف أول مورّد.", supplier_saved:"تم حفظ المورّد",
+  settings_title:"الإعدادات", currency:"العملة", set_goal:"هدف الدخل الشهري", theme:"المظهر",
+  dark_mode:"داكن", light_mode:"فاتح", language:"اللغة", save_settings:"حفظ الإعدادات", settings_saved:"تم الحفظ",
+  security_note:"البيانات محفوظة بشكل دائم وخاصة بك فقط. سيتم قفل الجلسة تلقائياً بعد 10 دقائق من عدم النشاط.",
+  cancel:"إلغاء", save:"حفظ", close:"إغلاق", currency_mad:"درهم مغربي", currency_usd:"دولار أمريكي",
+  currency_eur:"يورو", monthly_report:"التقرير الشهري", print_report:"طباعة التقرير",
+  generated_on:"تاريخ الإصدار", total_income_period:"إجمالي الدخل", total_expenses_period:"إجمالي المصاريف",
+  net_period:"الصافي", entries_count:"عدد الإدخالات", welcome_empty:"ابدأ بإضافة أول إدخال يومي لمقهاك",
+  go_add_entry:"إضافة إدخال", locked_title:"تم قفل الجلسة", locked_sub:"لعدم النشاط لفترة، الرجاء إعادة إدخال كلمة السر",
+  this_month:"هذا الشهر", all_time:"كل الفترات", filter:"تصفية", trophy:"أفضل يوم في الشهر",
+  low_data:"لا توجد بيانات كافية بعد لعرض هذا التحليل.", remove:"إزالة", none:"—",
+},
+fr:{
+  dir:"ltr", currency_default:"MAD",
+  app_name:"getrank", login_title:"Bon retour", login_sub:"Entrez le mot de passe pour accéder au tableau de bord",
+  password:"Mot de passe", enter:"Entrer", wrong_pass:"Mot de passe incorrect",
+  nav_dashboard:"Accueil", nav_entry:"Saisie du jour", nav_history:"Historique", nav_catalog:"Articles",
+  nav_suppliers:"Fournisseurs", nav_settings:"Paramètres", logout:"Déconnexion",
+  today_income:"Revenu du jour", today_expenses:"Dépenses du jour", today_net:"Net du jour", month_net:"Net du mois",
+  profit_margin:"Marge bénéficiaire", avg_daily:"Moyenne journalière", avg_weekly:"Moyenne hebdomadaire",
+  best_day:"Meilleur jour", worst_day:"Pire jour", streak:"Jours positifs d'affilée",
+  net_over_time:"Évolution du net", expense_breakdown:"Répartition des dépenses par article",
+  top_expenses:"Articles les plus coûteux", monthly_goal:"Objectif de revenu mensuel",
+  goal_progress:"de l'objectif", no_goal:"Aucun objectif défini. Allez dans Paramètres pour le définir.",
+  spike_alert:"Alerte : dépenses du jour supérieures à la moyenne de", vs_last_period:"vs période précédente",
+  forecast:"Prévision du mois prochain", calendar_view:"Vue calendrier",
+  add_entry:"Ajouter la saisie du jour", date:"Date", total_income:"Revenu total",
+  expenses_section:"Dépenses (articles)", add_expense_line:"Ajouter un article", item:"Article", qty:"Quantité",
+  unit_price:"Prix unitaire", amount:"Montant", note:"Note", note_ph:"Raison d'un changement inhabituel (optionnel)",
+  net_result:"Net calculé", save_entry:"Enregistrer", entry_saved:"Saisie enregistrée",
+  select_item:"Choisir un article", no_items_yet:"Aucun article. Ajoutez-en d'abord depuis la page Articles",
+  history_title:"Historique", search_ph:"Rechercher par date ou note...", export_csv:"Exporter CSV",
+  export_pdf:"Exporter PDF", col_date:"Date", col_income:"Revenu", col_expenses:"Dépenses",
+  col_net:"Net", col_margin:"Marge", col_actions:"Actions", edit:"Modifier", delete:"Supprimer",
+  confirm_delete:"Confirmer la suppression ?", no_entries:"Aucune saisie enregistrée",
+  catalog_title:"Catalogue d'articles", add_item:"Ajouter un article", item_name:"Nom de l'article", category:"Catégorie (optionnel)",
+  price_history:"Historique des prix", no_price_history:"Aucun historique de prix", item_saved:"Article enregistré",
+  no_catalog:"Aucun article. Ajoutez le premier pour commencer.",
+  suppliers_title:"Carnet de fournisseurs", add_supplier:"Ajouter un fournisseur", supplier_name:"Nom", phone:"Téléphone",
+  email:"E-mail (optionnel)", item_types:"Type d'articles fournis", linked_items:"Articles liés",
+  supplier_notes:"Notes", no_suppliers:"Aucun fournisseur. Ajoutez-en un.", supplier_saved:"Fournisseur enregistré",
+  settings_title:"Paramètres", currency:"Devise", set_goal:"Objectif de revenu mensuel", theme:"Thème",
+  dark_mode:"Sombre", light_mode:"Clair", language:"Langue", save_settings:"Enregistrer", settings_saved:"Enregistré",
+  security_note:"Vos données sont sauvegardées durablement et privées. La session se verrouille après 10 min d'inactivité.",
+  cancel:"Annuler", save:"Enregistrer", close:"Fermer", currency_mad:"Dirham marocain", currency_usd:"Dollar US",
+  currency_eur:"Euro", monthly_report:"Rapport mensuel", print_report:"Imprimer le rapport",
+  generated_on:"Généré le", total_income_period:"Revenu total", total_expenses_period:"Dépenses totales",
+  net_period:"Net", entries_count:"Nombre de saisies", welcome_empty:"Ajoutez votre première saisie journalière",
+  go_add_entry:"Ajouter une saisie", locked_title:"Session verrouillée", locked_sub:"Inactivité détectée, veuillez ressaisir le mot de passe",
+  this_month:"Ce mois", all_time:"Tout", filter:"Filtrer", trophy:"Meilleur jour du mois",
+  low_data:"Pas encore assez de données pour cette analyse.", remove:"Retirer", none:"—",
+},
+en:{
+  dir:"ltr", currency_default:"MAD",
+  app_name:"getrank", login_title:"Welcome back", login_sub:"Enter the password to access your café dashboard",
+  password:"Password", enter:"Enter", wrong_pass:"Incorrect password",
+  nav_dashboard:"Dashboard", nav_entry:"Daily entry", nav_history:"History", nav_catalog:"Items",
+  nav_suppliers:"Suppliers", nav_settings:"Settings", logout:"Log out",
+  today_income:"Today's income", today_expenses:"Today's expenses", today_net:"Today's net", month_net:"Month net",
+  profit_margin:"Profit margin", avg_daily:"Daily average", avg_weekly:"Weekly average",
+  best_day:"Best day", worst_day:"Worst day", streak:"Positive-net streak",
+  net_over_time:"Net over time", expense_breakdown:"Expense breakdown by item",
+  top_expenses:"Top budget-consuming items", monthly_goal:"Monthly income goal",
+  goal_progress:"of goal", no_goal:"No goal set yet. Go to Settings to set one.",
+  spike_alert:"Alert: today's expenses are above average by", vs_last_period:"vs previous period",
+  forecast:"Next month forecast", calendar_view:"Performance calendar",
+  add_entry:"Add today's entry", date:"Date", total_income:"Total income",
+  expenses_section:"Expenses (items)", add_expense_line:"Add item", item:"Item", qty:"Qty",
+  unit_price:"Unit price", amount:"Amount", note:"Note", note_ph:"Reason for any unusual change (optional)",
+  net_result:"Calculated net", save_entry:"Save entry", entry_saved:"Entry saved",
+  select_item:"Select item", no_items_yet:"No items yet, add them from the Items page first",
+  history_title:"Daily log", search_ph:"Search by date or note...", export_csv:"Export CSV",
+  export_pdf:"Export PDF", col_date:"Date", col_income:"Income", col_expenses:"Expenses",
+  col_net:"Net", col_margin:"Margin", col_actions:"Actions", edit:"Edit", delete:"Delete",
+  confirm_delete:"Are you sure you want to delete this?", no_entries:"No entries recorded yet",
+  catalog_title:"Item catalog", add_item:"Add new item", item_name:"Item name", category:"Category (optional)",
+  price_history:"Price history", no_price_history:"No price history yet", item_saved:"Item saved",
+  no_catalog:"No items in the catalog. Add your first item to get started.",
+  suppliers_title:"Supplier directory", add_supplier:"Add supplier", supplier_name:"Name", phone:"Phone",
+  email:"Email (optional)", item_types:"Type of items supplied", linked_items:"Linked items",
+  supplier_notes:"Notes", no_suppliers:"No suppliers yet. Add your first one.", supplier_saved:"Supplier saved",
+  settings_title:"Settings", currency:"Currency", set_goal:"Monthly income goal", theme:"Theme",
+  dark_mode:"Dark", light_mode:"Light", language:"Language", save_settings:"Save settings", settings_saved:"Saved",
+  security_note:"Your data is stored persistently and privately. The session locks automatically after 10 minutes of inactivity.",
+  cancel:"Cancel", save:"Save", close:"Close", currency_mad:"Moroccan dirham", currency_usd:"US dollar",
+  currency_eur:"Euro", monthly_report:"Monthly report", print_report:"Print report",
+  generated_on:"Generated on", total_income_period:"Total income", total_expenses_period:"Total expenses",
+  net_period:"Net", entries_count:"Entries count", welcome_empty:"Start by adding your first daily entry",
+  go_add_entry:"Add entry", locked_title:"Session locked", locked_sub:"Due to inactivity, please re-enter the password",
+  this_month:"This month", all_time:"All time", filter:"Filter", trophy:"Best day of the month",
+  low_data:"Not enough data yet for this analysis.", remove:"Remove", none:"—",
+}
+};
+function t(key){ return (I18N[state.lang] && I18N[state.lang][key]) || I18N.en[key] || key; }
+
+/* ---------------- State ---------------- */
+let state = {
+  lang:'ar', authed:false, view:'dashboard',
+  currency:'MAD', goal:0, theme:'dark',
+  catalog:[], suppliers:[], entries:[],
+  editingEntryId:null, editingItemId:null, editingSupplierId:null,
+  historySearch:'', expenseDraft:[],
+};
+let inactivityTimer=null;
+let chartNet=null, chartPie=null;
+
+/* ---------------- Storage helpers ---------------- */
+async function storeGet(key){
+  try{ const r = await window.storage.get(key,false); return r? JSON.parse(r.value): null; }
+  catch(e){ return null; }
+}
+async function storeSet(key,val){
+  try{ await window.storage.set(key, JSON.stringify(val), false); return true; }
+  catch(e){ console.error('storage error',e); return false; }
+}
+async function loadAll(){
+  const [settings,catalog,suppliers,entries] = await Promise.all([
+    storeGet('getrank:settings'), storeGet('getrank:catalog'),
+    storeGet('getrank:suppliers'), storeGet('getrank:entries')
+  ]);
+  if(settings){ state.lang=settings.lang||'ar'; state.currency=settings.currency||'MAD'; state.goal=settings.goal||0; state.theme=settings.theme||'dark'; }
+  state.catalog = catalog||[];
+  state.suppliers = suppliers||[];
+  state.entries = entries||[];
+}
+function persistSettings(){ storeSet('getrank:settings',{lang:state.lang,currency:state.currency,goal:state.goal,theme:state.theme}); }
+function persistCatalog(){ storeSet('getrank:catalog', state.catalog); }
+function persistSuppliers(){ storeSet('getrank:suppliers', state.suppliers); }
+function persistEntries(){ storeSet('getrank:entries', state.entries); }
+
+/* ---------------- Utils ---------------- */
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function fmtMoney(n){
+  const v = (Math.round((n||0)*100)/100);
+  return v.toLocaleString(state.lang==='ar'?'ar-MA':(state.lang==='fr'?'fr-FR':'en-US'),{minimumFractionDigits:2,maximumFractionDigits:2}) + ' ' + state.currency;
+}
+function fmtDate(d){
+  const dt = new Date(d+'T00:00:00');
+  return dt.toLocaleDateString(state.lang==='ar'?'ar-MA':(state.lang==='fr'?'fr-FR':'en-US'),{year:'numeric',month:'short',day:'numeric'});
+}
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+function entryExpenseTotal(e){ return (e.expenses||[]).reduce((s,x)=>s+ (x.amount||0),0); }
+function entryNet(e){ return (e.income||0) - entryExpenseTotal(e); }
+function sortedEntries(){ return [...state.entries].sort((a,b)=> a.date<b.date?1:-1); }
+function monthKey(d){ return d.slice(0,7); }
+function toast(msg){
+  const wrap=document.getElementById('toast-wrap');
+  const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); },2400);
+}
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- Auth ---------------- */
+function renderLogin(err){
+  document.getElementById('app-shell').style.display='none';
+  const el = document.getElementById('login-screen');
+  el.style.display='flex';
+  el.innerHTML = `
+    <div class="login-card">
+      <div class="login-mark">g</div>
+      <h1>${t('login_title')}</h1>
+      <p class="login-sub">${t('login_sub')}</p>
+      <form id="login-form">
+        <div class="field" style="text-align:start;">
+          <label>${t('password')}</label>
+          <input type="password" id="pw-input" autocomplete="current-password" autofocus>
+        </div>
+        <button class="btn btn-block" type="submit">${t('enter')}</button>
+        <div class="login-error">${err? t('wrong_pass'):''}</div>
+      </form>
+      <div class="lang-row">
+        ${['ar','fr','en'].map(l=>`<button class="lang-pill ${state.lang===l?'active':''}" data-lang="${l}">${l==='ar'?'العربية':l==='fr'?'Français':'English'}</button>`).join('')}
+      </div>
+    </div>`;
+  el.querySelectorAll('.lang-pill').forEach(b=> b.onclick=()=>{ state.lang=b.dataset.lang; applyDir(); persistSettings(); renderLogin(false); });
+  document.getElementById('login-form').onsubmit=(ev)=>{
+    ev.preventDefault();
+    const val = document.getElementById('pw-input').value;
+    if(val===APP_PASSWORD){ state.authed=true; boot(); }
+    else{ renderLogin(true); }
+  };
+}
+function applyDir(){
+  const d = I18N[state.lang].dir;
+  document.documentElement.setAttribute('dir', d);
+  document.documentElement.setAttribute('lang', state.lang);
+  document.body.setAttribute('data-theme', state.theme);
+}
+function resetInactivity(){
+  if(inactivityTimer) clearTimeout(inactivityTimer);
+  if(!state.authed) return;
+  inactivityTimer = setTimeout(()=>{ state.authed=false; renderLogin(false); }, AUTOLOCK_MS);
+}
+['mousemove','keydown','click','touchstart'].forEach(ev=> document.addEventListener(ev, ()=>resetInactivity()));
+
+/* ---------------- Nav ---------------- */
+const NAV = [
+  {id:'dashboard', icon:'&#9737;', label:'nav_dashboard'},
+  {id:'entry', icon:'&#10133;', label:'nav_entry'},
+  {id:'history', icon:'&#128220;', label:'nav_history'},
+  {id:'catalog', icon:'&#127838;', label:'nav_catalog'},
+  {id:'suppliers', icon:'&#128222;', label:'nav_suppliers'},
+  {id:'settings', icon:'&#9881;', label:'nav_settings'},
+];
+function renderSidebar(){
+  const sb = document.getElementById('sidebar');
+  sb.innerHTML = `
+    <div class="brand"><div class="brand-mark">g</div><div class="brand-name">${t('app_name')}</div></div>
+    ${NAV.map(n=>`<button class="nav-item ${state.view===n.id?'active':''}" data-nav="${n.id}"><span class="nav-icon">${n.icon}</span>${t(n.label)}</button>`).join('')}
+    <div class="sidebar-foot">
+      <button class="btn btn-ghost btn-sm btn-block" id="logout-btn">${t('logout')}</button>
+    </div>`;
+  sb.querySelectorAll('[data-nav]').forEach(b=> b.onclick=()=>{ state.view=b.dataset.nav; state.editingEntryId=null; render(); });
+  document.getElementById('logout-btn').onclick=()=>{ state.authed=false; renderLogin(false); };
+
+  const mb = document.getElementById('mobile-nav');
+  mb.innerHTML = NAV.map(n=>`<button class="mobile-nav-item ${state.view===n.id?'active':''}" data-nav="${n.id}"><span>${n.icon}</span>${t(n.label)}</button>`).join('');
+  mb.querySelectorAll('[data-nav]').forEach(b=> b.onclick=()=>{ state.view=b.dataset.nav; state.editingEntryId=null; render(); });
+}
+
+/* ---------------- Dashboard ---------------- */
+function computeStats(){
+  const entries = sortedEntries();
+  const today = todayStr();
+  const todayEntry = entries.find(e=>e.date===today);
+  const curMonth = today.slice(0,7);
+  const monthEntries = entries.filter(e=> monthKey(e.date)===curMonth);
+  const monthNet = monthEntries.reduce((s,e)=>s+entryNet(e),0);
+  const monthIncome = monthEntries.reduce((s,e)=>s+(e.income||0),0);
+  const margin = monthIncome>0 ? (monthNet/monthIncome*100) : 0;
+
+  const avgDaily = monthEntries.length? monthNet/monthEntries.length : 0;
+  const avgWeekly = avgDaily*7;
+
+  let best=null, worst=null;
+  entries.forEach(e=>{ const n=entryNet(e); if(!best||n>entryNet(best)) best=e; if(!worst||n<entryNet(worst)) worst=e; });
+
+  // streak of positive net days from most recent
+  let streak=0;
+  for(const e of entries){ if(entryNet(e)>0) streak++; else break; }
+
+  // spike alert: today's expenses vs avg of last 14 days (excluding today)
+  const last14 = entries.filter(e=>e.date!==today).slice(0,14);
+  const avgExp = last14.length? last14.reduce((s,e)=>s+entryExpenseTotal(e),0)/last14.length : 0;
+  let spikePct = null;
+  if(todayEntry && avgExp>0){
+    const diff = ((entryExpenseTotal(todayEntry)-avgExp)/avgExp)*100;
+    if(diff>25) spikePct = diff;
+  }
+
+  // forecast next month = avg of last 3 months income - avg expenses trend applied simply as avg net * days in next month
+  const monthsMap = {};
+  entries.forEach(e=>{ const mk=monthKey(e.date); monthsMap[mk]=monthsMap[mk]||[]; monthsMap[mk].push(e); });
+  const monthKeys = Object.keys(monthsMap).sort().reverse().slice(0,3);
+  let forecast=null;
+  if(monthKeys.length){
+    const totalNet = monthKeys.reduce((s,mk)=> s + monthsMap[mk].reduce((s2,e)=>s2+entryNet(e),0),0);
+    const totalDays = monthKeys.reduce((s,mk)=> s + monthsMap[mk].length,0);
+    const perDay = totalDays? totalNet/totalDays : 0;
+    forecast = perDay*30;
+  }
+
+  // expense breakdown by item (this month)
+  const byItem = {};
+  monthEntries.forEach(e=> (e.expenses||[]).forEach(x=>{ byItem[x.name]=(byItem[x.name]||0)+x.amount; }));
+  const topExpenses = Object.entries(byItem).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  // vs previous period (previous month)
+  const prevMonthDate = new Date(curMonth+'-01T00:00:00'); prevMonthDate.setMonth(prevMonthDate.getMonth()-1);
+  const prevMk = prevMonthDate.toISOString().slice(0,7);
+  const prevNet = (monthsMap[prevMk]||[]).reduce((s,e)=>s+entryNet(e),0);
+  let vsPrev = null;
+  if(prevNet!==0){ vsPrev = ((monthNet-prevNet)/Math.abs(prevNet))*100; }
+
+  return {entries, today, todayEntry, curMonth, monthEntries, monthNet, monthIncome, margin, avgDaily, avgWeekly, best, worst, streak, spikePct, forecast, topExpenses, byItem, vsPrev};
+}
+
+function renderDashboard(){
+  const s = computeStats();
+  const main = document.getElementById('main');
+  const goalPct = state.goal>0 ? Math.min(100, Math.max(0,(s.monthNet/state.goal)*100)) : null;
+
+  main.innerHTML = `
+    <div class="topbar">
+      <h2>${t('nav_dashboard')}</h2>
+      <div class="topbar-actions">
+        <button class="btn" id="quick-add">+ ${t('add_entry')}</button>
+      </div>
+    </div>
+
+    ${s.spikePct? `<div class="alert warn"><span class="alert-icon">&#9888;</span><span>${t('spike_alert')} ${s.spikePct.toFixed(0)}%</span></div>`:''}
+    ${(!s.entries.length)? `<div class="card empty-state"><div class="big">&#9749;</div><p>${t('welcome_empty')}</p><br><button class="btn" id="empty-add">${t('go_add_entry')}</button></div>` : ''}
+
+    ${s.entries.length? `
+    <div class="grid grid-4" style="margin-bottom:16px;">
+      <div class="card stat-card"><span class="stat-label">${t('today_income')}</span><span class="stat-value">${fmtMoney(s.todayEntry?s.todayEntry.income:0)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('today_expenses')}</span><span class="stat-value">${fmtMoney(s.todayEntry?entryExpenseTotal(s.todayEntry):0)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('today_net')}</span><span class="stat-value" style="color:${s.todayEntry && entryNet(s.todayEntry)<0?'var(--neg)':'var(--pos)'}">${fmtMoney(s.todayEntry?entryNet(s.todayEntry):0)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('month_net')}</span><span class="stat-value" style="color:${s.monthNet<0?'var(--neg)':'var(--pos)'}">${fmtMoney(s.monthNet)}</span>
+        ${s.vsPrev!==null? `<span class="stat-sub ${s.vsPrev>=0?'pos':'neg'}">${s.vsPrev>=0?'&#9650;':'&#9660;'} ${Math.abs(s.vsPrev).toFixed(0)}% ${t('vs_last_period')}</span>`:''}
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-bottom:16px;">
+      <div class="card stat-card"><span class="stat-label">${t('profit_margin')}</span><span class="stat-value">${s.margin.toFixed(1)}%</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('avg_daily')}</span><span class="stat-value">${fmtMoney(s.avgDaily)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('streak')}</span><span class="stat-value">&#128293; ${s.streak}</span></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">${t('net_over_time')}</div>
+        <div class="chart-box"><canvas id="chart-net"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">${t('expense_breakdown')}</div>
+        <div class="chart-box">${s.topExpenses.length? '<canvas id="chart-pie"></canvas>' : `<div class="empty-state">${t('low_data')}</div>`}</div>
+      </div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">${t('top_expenses')}</div>
+        ${s.topExpenses.length? `<table><tbody>${s.topExpenses.map(([name,amt])=>`<tr><td>${escapeHtml(name)}</td><td style="text-align:end;font-weight:700;">${fmtMoney(amt)}</td></tr>`).join('')}</tbody></table>` : `<div class="empty-state">${t('low_data')}</div>`}
+      </div>
+      <div class="card">
+        <div class="card-title">${t('monthly_goal')}</div>
+        ${state.goal>0? `
+          <div style="height:10px;background:var(--surface-2);border-radius:20px;overflow:hidden;margin-bottom:10px;">
+            <div style="height:100%;width:${goalPct}%;background:var(--accent);"></div>
+          </div>
+          <p class="stat-sub">${fmtMoney(s.monthNet)} / ${fmtMoney(state.goal)} — ${goalPct.toFixed(0)}% ${t('goal_progress')}</p>
+        `: `<p class="stat-sub">${t('no_goal')}</p>`}
+        <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:14px;">
+          <div class="card-title" style="margin-bottom:8px;">${t('forecast')}</div>
+          <span class="stat-value" style="font-size:1.2rem;">${s.forecast!==null? fmtMoney(s.forecast) : t('low_data')}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="card">
+        <div class="card-title">&#127942; ${t('trophy')}</div>
+        ${s.best? `<p>${fmtDate(s.best.date)} — <b style="color:var(--pos)">${fmtMoney(entryNet(s.best))}</b></p>`:`<p class="stat-sub">${t('low_data')}</p>`}
+        ${s.worst? `<p style="margin-top:6px;color:var(--text-muted);font-size:.85rem;">${t('worst_day')}: ${fmtDate(s.worst.date)} — <span style="color:var(--neg)">${fmtMoney(entryNet(s.worst))}</span></p>`:''}
+      </div>
+      <div class="card">
+        <div class="card-title">${t('calendar_view')}</div>
+        ${renderCalendar(s)}
+      </div>
+    </div>
+    ` : ''}
+  `;
+
+  document.getElementById('quick-add') && (document.getElementById('quick-add').onclick=()=>{ state.view='entry'; render(); });
+  document.getElementById('empty-add') && (document.getElementById('empty-add').onclick=()=>{ state.view='entry'; render(); });
+
+  if(s.entries.length){
+    drawNetChart(s.entries);
+    if(s.topExpenses.length) drawPieChart(s.topExpenses);
+  }
+}
+
+function renderCalendar(s){
+  const now = new Date();
+  const y=now.getFullYear(), m=now.getMonth();
+  const first = new Date(y,m,1);
+  const startOffset = (first.getDay()+7)%7; // 0=Sun
+  const daysInMonth = new Date(y,m+1,0).getDate();
+  const netByDate = {};
+  s.entries.forEach(e=>{ netByDate[e.date]=entryNet(e); });
+  let cells='';
+  for(let i=0;i<startOffset;i++) cells+=`<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const ds = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const n = netByDate[ds];
+    let cls='cal-cell';
+    if(n!==undefined) cls += n>=0? ' pos':' neg';
+    cells+=`<div class="${cls}" title="${ds}">${d}</div>`;
+  }
+  return `<div class="cal-grid">${cells}</div>`;
+}
+
+function drawNetChart(entries){
+  const canvas = document.getElementById('chart-net'); if(!canvas) return;
+  const last = [...entries].reverse().slice(-30);
+  if(chartNet) chartNet.destroy();
+  const styles = getComputedStyle(document.body);
+  chartNet = new Chart(canvas,{
+    type:'line',
+    data:{ labels: last.map(e=>fmtDate(e.date)),
+      datasets:[{ label:t('net_over_time'), data: last.map(e=>entryNet(e)), borderColor: styles.getPropertyValue('--accent').trim(), backgroundColor:'transparent', tension:.35, pointRadius:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}},
+      scales:{ x:{ticks:{color:styles.getPropertyValue('--text-muted').trim(), maxRotation:0, autoSkip:true, maxTicksLimit:6}, grid:{display:false}},
+               y:{ticks:{color:styles.getPropertyValue('--text-muted').trim()}, grid:{color:styles.getPropertyValue('--border').trim()}} } }
+  });
+}
+function drawPieChart(topExpenses){
+  const canvas = document.getElementById('chart-pie'); if(!canvas) return;
+  if(chartPie) chartPie.destroy();
+  const palette = ['#E0954A','#8FA06E','#7FA8C9','#D4695A','#C9A24A','#6FAE7C'];
+  const styles = getComputedStyle(document.body);
+  chartPie = new Chart(canvas,{
+    type:'doughnut',
+    data:{ labels: topExpenses.map(x=>x[0]), datasets:[{ data: topExpenses.map(x=>x[1]), backgroundColor: palette, borderColor: styles.getPropertyValue('--surface').trim(), borderWidth:2 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom', labels:{color:styles.getPropertyValue('--text-muted').trim(), boxWidth:12, font:{size:10}}}} }
+  });
+}
+
+/* ---------------- Entry form ---------------- */
+function renderEntry(){
+  const main = document.getElementById('main');
+  const editing = state.editingEntryId ? state.entries.find(e=>e.id===state.editingEntryId) : null;
+  if(editing && state.expenseDraft.length===0 && !state._draftLoaded){
+    state.expenseDraft = editing.expenses.map(x=>({...x}));
+    state._draftLoaded = true;
+  }
+  if(!editing && !state._draftInit){ state.expenseDraft = []; state._draftInit = true; }
+
+  const dateVal = editing? editing.date : todayStr();
+  const incomeVal = editing? editing.income : '';
+  const noteVal = editing? (editing.note||'') : '';
+
+  main.innerHTML = `
+    <div class="topbar"><h2>${t('add_entry')}</h2></div>
+    <div class="card" style="max-width:640px;">
+      <div class="form-row">
+        <div class="field"><label>${t('date')}</label><input type="date" id="f-date" value="${dateVal}"></div>
+        <div class="field"><label>${t('total_income')}</label><input type="number" step="0.01" id="f-income" value="${incomeVal}" placeholder="0.00"></div>
+      </div>
+
+      <div style="margin-top:10px;">
+        <div class="card-title">${t('expenses_section')} <button class="btn btn-ghost btn-sm" id="add-line">+ ${t('add_expense_line')}</button></div>
+        ${state.catalog.length===0? `<div class="alert warn"><span class="alert-icon">&#8505;</span><span>${t('no_items_yet')}</span></div>` : ''}
+        <div id="expense-lines"></div>
+      </div>
+
+      <div class="field" style="margin-top:14px;">
+        <label>${t('note')}</label>
+        <textarea id="f-note" rows="2" placeholder="${t('note_ph')}">${escapeHtml(noteVal)}</textarea>
+      </div>
+
+      <div class="card" style="background:var(--surface-2);display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+        <span class="stat-label">${t('net_result')}</span>
+        <span class="stat-value" id="net-preview">${fmtMoney(0)}</span>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn" id="save-entry">${t('save_entry')}</button>
+        ${editing? `<button class="btn btn-ghost" id="cancel-edit">${t('cancel')}</button>`:''}
+      </div>
+    </div>
+  `;
+  renderExpenseLines();
+  document.getElementById('add-line').onclick=()=>{ if(state.catalog.length===0){toast(t('no_items_yet')); return;} state.expenseDraft.push({itemId:state.catalog[0].id, name:state.catalog[0].name, qty:1, unitPrice:0, amount:0}); renderExpenseLines(); };
+  document.getElementById('f-income').oninput = updateNetPreview;
+  document.getElementById('cancel-edit') && (document.getElementById('cancel-edit').onclick=()=>{ resetEntryDraft(); state.view='history'; render(); });
+  document.getElementById('save-entry').onclick=saveEntry;
+  updateNetPreview();
+}
+function resetEntryDraft(){ state.editingEntryId=null; state.expenseDraft=[]; state._draftLoaded=false; state._draftInit=false; }
+function renderExpenseLines(){
+  const wrap = document.getElementById('expense-lines');
+  wrap.innerHTML = state.expenseDraft.map((line,idx)=>`
+    <div class="expense-line" data-idx="${idx}">
+      <div class="field">
+        <label>${t('item')}</label>
+        <select class="ex-item">${state.catalog.map(c=>`<option value="${c.id}" ${c.id===line.itemId?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select>
+      </div>
+      <div class="field" style="max-width:90px;">
+        <label>${t('qty')}</label>
+        <input type="number" step="0.01" class="ex-qty" value="${line.qty}">
+      </div>
+      <div class="field" style="max-width:110px;">
+        <label>${t('unit_price')}</label>
+        <input type="number" step="0.01" class="ex-price" value="${line.unitPrice}">
+      </div>
+      <div class="amt">${fmtMoney(line.amount)}</div>
+      <button class="icon-btn ex-remove" title="${t('remove')}">&#10005;</button>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('.expense-line').forEach(row=>{
+    const idx = +row.dataset.idx;
+    row.querySelector('.ex-item').onchange=(e)=>{ const item=state.catalog.find(c=>c.id===e.target.value); state.expenseDraft[idx].itemId=item.id; state.expenseDraft[idx].name=item.name; recalcLine(idx); };
+    row.querySelector('.ex-qty').oninput=(e)=>{ state.expenseDraft[idx].qty=parseFloat(e.target.value)||0; recalcLine(idx); };
+    row.querySelector('.ex-price').oninput=(e)=>{ state.expenseDraft[idx].unitPrice=parseFloat(e.target.value)||0; recalcLine(idx); };
+    row.querySelector('.ex-remove').onclick=()=>{ state.expenseDraft.splice(idx,1); renderExpenseLines(); updateNetPreview(); };
+  });
+}
+function recalcLine(idx){
+  const line = state.expenseDraft[idx];
+  line.amount = (line.qty||0)*(line.unitPrice||0);
+  const row = document.querySelectorAll('.expense-line')[idx];
+  if(row) row.querySelector('.amt').textContent = fmtMoney(line.amount);
+  updateNetPreview();
+}
+function updateNetPreview(){
+  const income = parseFloat(document.getElementById('f-income').value)||0;
+  const expTotal = state.expenseDraft.reduce((s,l)=>s+(l.amount||0),0);
+  const el = document.getElementById('net-preview');
+  const net = income-expTotal;
+  el.textContent = fmtMoney(net);
+  el.style.color = net<0? 'var(--neg)':'var(--pos)';
+}
+function saveEntry(){
+  const date = document.getElementById('f-date').value || todayStr();
+  const income = parseFloat(document.getElementById('f-income').value)||0;
+  const note = document.getElementById('f-note').value;
+  const expenses = state.expenseDraft.filter(l=>l.itemId).map(l=>({...l}));
+
+  // update price history in catalog
+  expenses.forEach(l=>{
+    const item = state.catalog.find(c=>c.id===l.itemId);
+    if(item){ item.priceHistory = item.priceHistory||[]; item.priceHistory.push({date, price:l.unitPrice}); }
+  });
+
+  if(state.editingEntryId){
+    const e = state.entries.find(x=>x.id===state.editingEntryId);
+    e.date=date; e.income=income; e.note=note; e.expenses=expenses;
+  } else {
+    const existing = state.entries.find(e=>e.date===date);
+    if(existing){ existing.income=income; existing.note=note; existing.expenses=expenses; }
+    else { state.entries.push({id:uid(), date, income, note, expenses}); }
+  }
+  persistEntries(); persistCatalog();
+  toast(t('entry_saved'));
+  resetEntryDraft();
+  state.view='history';
+  render();
+}
+
+/* ---------------- History ---------------- */
+function renderHistory(){
+  const main = document.getElementById('main');
+  const q = state.historySearch.toLowerCase();
+  const rows = sortedEntries().filter(e=> !q || e.date.includes(q) || (e.note||'').toLowerCase().includes(q));
+  main.innerHTML = `
+    <div class="topbar">
+      <h2>${t('history_title')}</h2>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" id="btn-csv">${t('export_csv')}</button>
+        <button class="btn btn-ghost btn-sm" id="btn-pdf">${t('export_pdf')}</button>
+      </div>
+    </div>
+    <div class="search-bar"><input type="text" id="hist-search" placeholder="${t('search_ph')}" value="${escapeHtml(state.historySearch)}"></div>
+    <div class="card">
+      ${rows.length? `<div class="table-wrap"><table>
+        <thead><tr><th>${t('col_date')}</th><th>${t('col_income')}</th><th>${t('col_expenses')}</th><th>${t('col_net')}</th><th>${t('col_margin')}</th><th>${t('col_actions')}</th></tr></thead>
+        <tbody>${rows.map(e=>{
+          const exp = entryExpenseTotal(e); const net = entryNet(e); const margin = e.income>0? (net/e.income*100):0;
+          return `<tr>
+            <td>${fmtDate(e.date)}</td>
+            <td>${fmtMoney(e.income)}</td>
+            <td>${fmtMoney(exp)}</td>
+            <td style="color:${net<0?'var(--neg)':'var(--pos)'};font-weight:700;">${fmtMoney(net)}</td>
+            <td>${margin.toFixed(0)}%</td>
+            <td class="row-actions">
+              <button class="icon-btn e-edit" data-id="${e.id}" title="${t('edit')}">&#9998;</button>
+              <button class="icon-btn e-del" data-id="${e.id}" title="${t('delete')}">&#128465;</button>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table></div>` : `<div class="empty-state">${t('no_entries')}</div>`}
+    </div>
+    <div id="print-report-target" class="print-only"></div>
+  `;
+  document.getElementById('hist-search').oninput=(e)=>{ state.historySearch=e.target.value; renderHistory(); };
+  document.getElementById('btn-csv').onclick=exportCSV;
+  document.getElementById('btn-pdf').onclick=exportPDF;
+  main.querySelectorAll('.e-edit').forEach(b=> b.onclick=()=>{ resetEntryDraft(); state.editingEntryId=b.dataset.id; state.view='entry'; render(); });
+  main.querySelectorAll('.e-del').forEach(b=> b.onclick=()=>{ if(confirm(t('confirm_delete'))){ state.entries = state.entries.filter(e=>e.id!==b.dataset.id); persistEntries(); renderHistory(); } });
+}
+function exportCSV(){
+  const rows = sortedEntries();
+  let csv = [t('col_date'),t('col_income'),t('col_expenses'),t('col_net'),t('note')].join(',')+'\n';
+  rows.forEach(e=>{
+    csv += [e.date, e.income, entryExpenseTotal(e), entryNet(e), '"'+(e.note||'').replace(/"/g,'""')+'"'].join(',')+'\n';
+  });
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `getrank-${todayStr()}.csv`;
+  a.click();
+}
+function exportPDF(){
+  const rows = sortedEntries();
+  const totalIncome = rows.reduce((s,e)=>s+(e.income||0),0);
+  const totalExp = rows.reduce((s,e)=>s+entryExpenseTotal(e),0);
+  const netAll = totalIncome-totalExp;
+  const target = document.getElementById('print-report-target');
+  target.innerHTML = `
+    <div style="padding:20px;font-family:Cairo,sans-serif;">
+      <h1>getrank — ${t('monthly_report')}</h1>
+      <p>${t('generated_on')}: ${fmtDate(todayStr())}</p>
+      <p>${t('total_income_period')}: ${fmtMoney(totalIncome)} | ${t('total_expenses_period')}: ${fmtMoney(totalExp)} | ${t('net_period')}: ${fmtMoney(netAll)} | ${t('entries_count')}: ${rows.length}</p>
+      <table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;margin-top:12px;font-size:13px;">
+        <thead><tr><th>${t('col_date')}</th><th>${t('col_income')}</th><th>${t('col_expenses')}</th><th>${t('col_net')}</th><th>${t('note')}</th></tr></thead>
+        <tbody>${rows.map(e=>`<tr><td>${fmtDate(e.date)}</td><td>${fmtMoney(e.income)}</td><td>${fmtMoney(entryExpenseTotal(e))}</td><td>${fmtMoney(entryNet(e))}</td><td>${escapeHtml(e.note||'')}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>`;
+  window.print();
+}
+
+/* ---------------- Catalog ---------------- */
+function renderCatalog(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar"><h2>${t('catalog_title')}</h2>
+      <div class="topbar-actions"><button class="btn" id="add-item-btn">+ ${t('add_item')}</button></div>
+    </div>
+    ${state.catalog.length? `<div class="grid grid-3">${state.catalog.map(c=>`
+      <div class="card">
+        <div class="card-title">${escapeHtml(c.name)} <span class="row-actions"><button class="icon-btn c-edit" data-id="${c.id}">&#9998;</button><button class="icon-btn c-del" data-id="${c.id}">&#128465;</button></span></div>
+        ${c.category? `<span class="tag">${escapeHtml(c.category)}</span>`:''}
+        <p class="stat-sub" style="margin-top:10px;">${t('price_history')}</p>
+        ${(c.priceHistory&&c.priceHistory.length)? `<p style="font-size:.8rem;">${c.priceHistory.slice(-3).reverse().map(p=>`${fmtDate(p.date)}: ${fmtMoney(p.price)}`).join(' · ')}</p>` : `<p class="stat-sub">${t('no_price_history')}</p>`}
+      </div>`).join('')}</div>` : `<div class="card empty-state">${t('no_catalog')}</div>`}
+  `;
+  document.getElementById('add-item-btn').onclick=()=>openItemModal(null);
+  main.querySelectorAll('.c-edit').forEach(b=> b.onclick=()=>openItemModal(state.catalog.find(c=>c.id===b.dataset.id)));
+  main.querySelectorAll('.c-del').forEach(b=> b.onclick=()=>{ if(confirm(t('confirm_delete'))){ state.catalog = state.catalog.filter(c=>c.id!==b.dataset.id); persistCatalog(); renderCatalog(); } });
+}
+function openItemModal(item){
+  const backdrop = document.createElement('div'); backdrop.className='modal-backdrop';
+  backdrop.innerHTML = `<div class="modal">
+    <h3>${item? t('edit'):t('add_item')}</h3>
+    <div class="field"><label>${t('item_name')}</label><input id="m-name" value="${item?escapeHtml(item.name):''}"></div>
+    <div class="field"><label>${t('category')}</label><input id="m-cat" value="${item?escapeHtml(item.category||''):''}"></div>
+    <div style="display:flex;gap:10px;"><button class="btn" id="m-save">${t('save')}</button><button class="btn btn-ghost" id="m-cancel">${t('cancel')}</button></div>
+  </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#m-cancel').onclick=()=>backdrop.remove();
+  backdrop.querySelector('#m-save').onclick=()=>{
+    const name = document.getElementById('m-name').value.trim();
+    const cat = document.getElementById('m-cat').value.trim();
+    if(!name) return;
+    if(item){ item.name=name; item.category=cat; }
+    else { state.catalog.push({id:uid(), name, category:cat, priceHistory:[]}); }
+    persistCatalog(); toast(t('item_saved')); backdrop.remove(); renderCatalog();
+  };
+}
+
+/* ---------------- Suppliers ---------------- */
+function renderSuppliers(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar"><h2>${t('suppliers_title')}</h2>
+      <div class="topbar-actions"><button class="btn" id="add-sup-btn">+ ${t('add_supplier')}</button></div>
+    </div>
+    ${state.suppliers.length? `<div class="grid grid-3">${state.suppliers.map(sp=>`
+      <div class="card">
+        <div class="card-title">${escapeHtml(sp.name)} <span class="row-actions"><button class="icon-btn s-edit" data-id="${sp.id}">&#9998;</button><button class="icon-btn s-del" data-id="${sp.id}">&#128465;</button></span></div>
+        ${sp.phone? `<p style="font-size:.85rem;">&#128222; ${escapeHtml(sp.phone)}</p>`:''}
+        ${sp.email? `<p style="font-size:.85rem;">&#9993; ${escapeHtml(sp.email)}</p>`:''}
+        ${sp.itemTypes? `<p style="margin-top:6px;"><span class="tag">${escapeHtml(sp.itemTypes)}</span></p>`:''}
+        ${sp.notes? `<p class="stat-sub" style="margin-top:8px;">${escapeHtml(sp.notes)}</p>`:''}
+      </div>`).join('')}</div>` : `<div class="card empty-state">${t('no_suppliers')}</div>`}
+  `;
+  document.getElementById('add-sup-btn').onclick=()=>openSupplierModal(null);
+  main.querySelectorAll('.s-edit').forEach(b=> b.onclick=()=>openSupplierModal(state.suppliers.find(s=>s.id===b.dataset.id)));
+  main.querySelectorAll('.s-del').forEach(b=> b.onclick=()=>{ if(confirm(t('confirm_delete'))){ state.suppliers = state.suppliers.filter(s=>s.id!==b.dataset.id); persistSuppliers(); renderSuppliers(); } });
+}
+function openSupplierModal(sp){
+  const backdrop = document.createElement('div'); backdrop.className='modal-backdrop';
+  backdrop.innerHTML = `<div class="modal">
+    <h3>${sp? t('edit'):t('add_supplier')}</h3>
+    <div class="field"><label>${t('supplier_name')}</label><input id="m-sname" value="${sp?escapeHtml(sp.name):''}"></div>
+    <div class="form-row">
+      <div class="field"><label>${t('phone')}</label><input id="m-sphone" value="${sp?escapeHtml(sp.phone||''):''}"></div>
+      <div class="field"><label>${t('email')}</label><input id="m-semail" value="${sp?escapeHtml(sp.email||''):''}"></div>
+    </div>
+    <div class="field"><label>${t('item_types')}</label><input id="m-stypes" value="${sp?escapeHtml(sp.itemTypes||''):''}"></div>
+    <div class="field"><label>${t('supplier_notes')}</label><textarea id="m-snotes" rows="2">${sp?escapeHtml(sp.notes||''):''}</textarea></div>
+    <div style="display:flex;gap:10px;"><button class="btn" id="m-ssave">${t('save')}</button><button class="btn btn-ghost" id="m-scancel">${t('cancel')}</button></div>
+  </div>`;
+  document.body.appendChild(backdrop);
+  backdrop.querySelector('#m-scancel').onclick=()=>backdrop.remove();
+  backdrop.querySelector('#m-ssave').onclick=()=>{
+    const name = document.getElementById('m-sname').value.trim();
+    if(!name) return;
+    const data = { name, phone:document.getElementById('m-sphone').value.trim(), email:document.getElementById('m-semail').value.trim(),
+      itemTypes:document.getElementById('m-stypes').value.trim(), notes:document.getElementById('m-snotes').value.trim() };
+    if(sp){ Object.assign(sp,data); } else { state.suppliers.push({id:uid(), ...data}); }
+    persistSuppliers(); toast(t('supplier_saved')); backdrop.remove(); renderSuppliers();
+  };
+}
+
+/* ---------------- Settings ---------------- */
+function renderSettings(){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <div class="topbar"><h2>${t('settings_title')}</h2></div>
+    <div class="card" style="max-width:520px;">
+      <div class="field"><label>${t('language')}</label>
+        <div class="pill-toggle">
+          ${['ar','fr','en'].map(l=>`<button data-lang="${l}" class="${state.lang===l?'active':''}">${l==='ar'?'العربية':l==='fr'?'Français':'English'}</button>`).join('')}
+        </div>
+      </div>
+      <div class="field"><label>${t('theme')}</label>
+        <div class="pill-toggle">
+          <button data-theme="dark" class="${state.theme==='dark'?'active':''}">${t('dark_mode')}</button>
+          <button data-theme="light" class="${state.theme==='light'?'active':''}">${t('light_mode')}</button>
+        </div>
+      </div>
+      <div class="field"><label>${t('currency')}</label>
+        <select id="set-currency">
+          <option value="MAD" ${state.currency==='MAD'?'selected':''}>${t('currency_mad')} (MAD)</option>
+          <option value="USD" ${state.currency==='USD'?'selected':''}>${t('currency_usd')} (USD)</option>
+          <option value="EUR" ${state.currency==='EUR'?'selected':''}>${t('currency_eur')} (EUR)</option>
+        </select>
+      </div>
+      <div class="field"><label>${t('set_goal')}</label><input type="number" step="0.01" id="set-goal" value="${state.goal||''}"></div>
+      <button class="btn" id="save-settings">${t('save_settings')}</button>
+      <p class="stat-sub" style="margin-top:18px;">&#128274; ${t('security_note')}</p>
+    </div>
+  `;
+  main.querySelectorAll('[data-lang]').forEach(b=> b.onclick=()=>{ state.lang=b.dataset.lang; applyDir(); render(); });
+  main.querySelectorAll('[data-theme]').forEach(b=> b.onclick=()=>{ state.theme=b.dataset.theme; applyDir(); render(); });
+  document.getElementById('save-settings').onclick=()=>{
+    state.currency = document.getElementById('set-currency').value;
+    state.goal = parseFloat(document.getElementById('set-goal').value)||0;
+    persistSettings();
+    toast(t('settings_saved'));
+    render();
+  };
+}
+
+/* ---------------- Router ---------------- */
+function render(){
+  applyDir();
+  renderSidebar();
+  if(state.view==='dashboard') renderDashboard();
+  else if(state.view==='entry') renderEntry();
+  else if(state.view==='history') renderHistory();
+  else if(state.view==='catalog') renderCatalog();
+  else if(state.view==='suppliers') renderSuppliers();
+  else if(state.view==='settings') renderSettings();
+}
+async function boot(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-shell').style.display='flex';
+  resetInactivity();
+  render();
+}
+(async function init(){
+  await loadAll();
+  applyDir();
+  renderLogin(false);
+})();
+</script>
+</body>
+</html>
