@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --bg:#1B140F;
@@ -255,9 +257,11 @@ ar:{
   supplier_notes:"ملاحظات", no_suppliers:"لا يوجد موردون بعد. أضف أول مورّد.", supplier_saved:"تم حفظ المورّد",
   settings_title:"الإعدادات", currency:"العملة", set_goal:"هدف الدخل الشهري", theme:"المظهر",
   dark_mode:"داكن", light_mode:"فاتح", language:"اللغة", save_settings:"حفظ الإعدادات", settings_saved:"تم الحفظ",
-  security_note:"البيانات محفوظة بشكل دائم وخاصة بك فقط. سيتم قفل الجلسة تلقائياً بعد 10 دقائق من عدم النشاط.",
+  security_note:"البيانات تُزامن تلقائياً على السحابة (Firebase) وتُحفظ نسخة محلية أيضاً للعمل بدون إنترنت. سيتم قفل الجلسة تلقائياً بعد 10 دقائق من عدم النشاط.",
   cancel:"إلغاء", save:"حفظ", close:"إغلاق", currency_mad:"درهم مغربي", currency_usd:"دولار أمريكي",
   currency_eur:"يورو", monthly_report:"التقرير الشهري", print_report:"طباعة التقرير",
+  daily_report:"تقرير يومي", print_daily:"طباعة/PDF يومي", items_bought:"السلع التي تم جلبها",
+  income_of_day:"مدخول اليوم", net_after_items:"الصافي بعد نقص السلع", no_items_today:"لم يتم تسجيل سلع لهذا اليوم",
   generated_on:"تاريخ الإصدار", total_income_period:"إجمالي الدخل", total_expenses_period:"إجمالي المصاريف",
   net_period:"الصافي", entries_count:"عدد الإدخالات", welcome_empty:"ابدأ بإضافة أول إدخال يومي لمقهاك",
   go_add_entry:"إضافة إدخال", locked_title:"تم قفل الجلسة", locked_sub:"لعدم النشاط لفترة، الرجاء إعادة إدخال كلمة السر",
@@ -295,9 +299,11 @@ fr:{
   supplier_notes:"Notes", no_suppliers:"Aucun fournisseur. Ajoutez-en un.", supplier_saved:"Fournisseur enregistré",
   settings_title:"Paramètres", currency:"Devise", set_goal:"Objectif de revenu mensuel", theme:"Thème",
   dark_mode:"Sombre", light_mode:"Clair", language:"Langue", save_settings:"Enregistrer", settings_saved:"Enregistré",
-  security_note:"Vos données sont sauvegardées durablement et privées. La session se verrouille après 10 min d'inactivité.",
+  security_note:"Vos données sont synchronisées automatiquement sur le cloud (Firebase), avec une copie locale pour fonctionner hors ligne. La session se verrouille après 10 min d'inactivité.",
   cancel:"Annuler", save:"Enregistrer", close:"Fermer", currency_mad:"Dirham marocain", currency_usd:"Dollar US",
   currency_eur:"Euro", monthly_report:"Rapport mensuel", print_report:"Imprimer le rapport",
+  daily_report:"Rapport journalier", print_daily:"Imprimer/PDF du jour", items_bought:"Articles achetés",
+  income_of_day:"Revenu du jour", net_after_items:"Net après déduction des articles", no_items_today:"Aucun article enregistré ce jour-là",
   generated_on:"Généré le", total_income_period:"Revenu total", total_expenses_period:"Dépenses totales",
   net_period:"Net", entries_count:"Nombre de saisies", welcome_empty:"Ajoutez votre première saisie journalière",
   go_add_entry:"Ajouter une saisie", locked_title:"Session verrouillée", locked_sub:"Inactivité détectée, veuillez ressaisir le mot de passe",
@@ -335,9 +341,11 @@ en:{
   supplier_notes:"Notes", no_suppliers:"No suppliers yet. Add your first one.", supplier_saved:"Supplier saved",
   settings_title:"Settings", currency:"Currency", set_goal:"Monthly income goal", theme:"Theme",
   dark_mode:"Dark", light_mode:"Light", language:"Language", save_settings:"Save settings", settings_saved:"Saved",
-  security_note:"Your data is stored persistently and privately. The session locks automatically after 10 minutes of inactivity.",
+  security_note:"Your data syncs automatically to the cloud (Firebase), with a local copy kept for offline use. The session locks automatically after 10 minutes of inactivity.",
   cancel:"Cancel", save:"Save", close:"Close", currency_mad:"Moroccan dirham", currency_usd:"US dollar",
   currency_eur:"Euro", monthly_report:"Monthly report", print_report:"Print report",
+  daily_report:"Daily report", print_daily:"Print/PDF today", items_bought:"Items purchased",
+  income_of_day:"Day's income", net_after_items:"Net after items", no_items_today:"No items recorded for this day",
   generated_on:"Generated on", total_income_period:"Total income", total_expenses_period:"Total expenses",
   net_period:"Net", entries_count:"Entries count", welcome_empty:"Start by adding your first daily entry",
   go_add_entry:"Add entry", locked_title:"Session locked", locked_sub:"Due to inactivity, please re-enter the password",
@@ -358,14 +366,73 @@ let state = {
 let inactivityTimer=null;
 let chartNet=null, chartPie=null;
 
-/* ---------------- Storage helpers ---------------- */
+/* ---------------- Storage helpers ----------------
+   Primary storage: Firebase Firestore (free tier) — syncs your data
+   across every device/browser you log into with the same password.
+   A localStorage cache is kept alongside it so the app still works
+   instantly and offline; it re-syncs to the cloud once back online. */
+const firebaseConfig = {
+  apiKey: "AIzaSyAn5-SF8nqhqauhBcEf6KaOKvzdjVvoSiM",
+  authDomain: "getrank-inventory.firebaseapp.com",
+  projectId: "getrank-inventory",
+  storageBucket: "getrank-inventory.firebasestorage.app",
+  messagingSenderId: "390895831461",
+  appId: "1:390895831461:web:4167c215209cdd40d2004c",
+  measurementId: "G-DR2QR1E88H"
+};
+const memoryFallback = {};
+let storageBackend = 'local';
+try{
+  const testKey='__getrank_test__';
+  window.localStorage.setItem(testKey,'1');
+  window.localStorage.removeItem(testKey);
+}catch(e){ storageBackend='memory'; }
+
+let cloudReady = false;
+let cloudDocRef = null;
+try{
+  if(window.firebase && firebaseConfig.apiKey){
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    try{ db.enablePersistence({synchronizeTabs:true}).catch(()=>{}); }catch(e){}
+    cloudDocRef = db.collection('getrank').doc('cafe');
+    cloudReady = true;
+  }
+}catch(e){ console.error('firebase init failed', e); cloudReady = false; }
+
 async function storeGet(key){
-  try{ const r = await window.storage.get(key,false); return r? JSON.parse(r.value): null; }
-  catch(e){ return null; }
+  // Local cache first, so the UI is instant; cloud value (if reachable) wins and re-syncs the cache.
+  let local = null;
+  try{
+    if(storageBackend==='memory') local = memoryFallback[key] ?? null;
+    else { const raw = window.localStorage.getItem(key); local = raw? JSON.parse(raw): null; }
+  }catch(e){ local = null; }
+
+  if(cloudReady){
+    try{
+      const snap = await cloudDocRef.get();
+      if(snap.exists){
+        const data = snap.data();
+        if(data && data[key]!==undefined){
+          if(storageBackend==='memory') memoryFallback[key]=data[key];
+          else { try{ window.localStorage.setItem(key, JSON.stringify(data[key])); }catch(e){} }
+          return data[key];
+        }
+      }
+    }catch(e){ console.error('cloud get error, using local cache', e); }
+  }
+  return local;
 }
 async function storeSet(key,val){
-  try{ await window.storage.set(key, JSON.stringify(val), false); return true; }
-  catch(e){ console.error('storage error',e); return false; }
+  try{
+    if(storageBackend==='memory') memoryFallback[key]=val;
+    else window.localStorage.setItem(key, JSON.stringify(val));
+  }catch(e){ console.error('local cache write error',e); }
+  if(cloudReady){
+    try{ await cloudDocRef.set({[key]:val},{merge:true}); return true; }
+    catch(e){ console.error('cloud set error, saved locally only', e); return false; }
+  }
+  return true;
 }
 async function loadAll(){
   const [settings,catalog,suppliers,entries] = await Promise.all([
@@ -550,7 +617,9 @@ function renderDashboard(){
     <div class="grid grid-4" style="margin-bottom:16px;">
       <div class="card stat-card"><span class="stat-label">${t('today_income')}</span><span class="stat-value">${fmtMoney(s.todayEntry?s.todayEntry.income:0)}</span></div>
       <div class="card stat-card"><span class="stat-label">${t('today_expenses')}</span><span class="stat-value">${fmtMoney(s.todayEntry?entryExpenseTotal(s.todayEntry):0)}</span></div>
-      <div class="card stat-card"><span class="stat-label">${t('today_net')}</span><span class="stat-value" style="color:${s.todayEntry && entryNet(s.todayEntry)<0?'var(--neg)':'var(--pos)'}">${fmtMoney(s.todayEntry?entryNet(s.todayEntry):0)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('today_net')}</span><span class="stat-value" style="color:${s.todayEntry && entryNet(s.todayEntry)<0?'var(--neg)':'var(--pos)'}">${fmtMoney(s.todayEntry?entryNet(s.todayEntry):0)}</span>
+        ${s.todayEntry? `<button class="btn btn-ghost btn-sm" id="today-pdf" style="margin-top:6px;">&#128196; ${t('print_daily')}</button>`:''}
+      </div>
       <div class="card stat-card"><span class="stat-label">${t('month_net')}</span><span class="stat-value" style="color:${s.monthNet<0?'var(--neg)':'var(--pos)'}">${fmtMoney(s.monthNet)}</span>
         ${s.vsPrev!==null? `<span class="stat-sub ${s.vsPrev>=0?'pos':'neg'}">${s.vsPrev>=0?'&#9650;':'&#9660;'} ${Math.abs(s.vsPrev).toFixed(0)}% ${t('vs_last_period')}</span>`:''}
       </div>
@@ -609,6 +678,7 @@ function renderDashboard(){
 
   document.getElementById('quick-add') && (document.getElementById('quick-add').onclick=()=>{ state.view='entry'; render(); });
   document.getElementById('empty-add') && (document.getElementById('empty-add').onclick=()=>{ state.view='entry'; render(); });
+  document.getElementById('today-pdf') && (document.getElementById('today-pdf').onclick=()=>exportDailyPDF(s.todayEntry.id));
 
   if(s.entries.length){
     drawNetChart(s.entries);
@@ -811,6 +881,7 @@ function renderHistory(){
             <td style="color:${net<0?'var(--neg)':'var(--pos)'};font-weight:700;">${fmtMoney(net)}</td>
             <td>${margin.toFixed(0)}%</td>
             <td class="row-actions">
+              <button class="icon-btn e-pdf" data-id="${e.id}" title="${t('print_daily')}">&#128196;</button>
               <button class="icon-btn e-edit" data-id="${e.id}" title="${t('edit')}">&#9998;</button>
               <button class="icon-btn e-del" data-id="${e.id}" title="${t('delete')}">&#128465;</button>
             </td>
@@ -823,6 +894,7 @@ function renderHistory(){
   document.getElementById('hist-search').oninput=(e)=>{ state.historySearch=e.target.value; renderHistory(); };
   document.getElementById('btn-csv').onclick=exportCSV;
   document.getElementById('btn-pdf').onclick=exportPDF;
+  main.querySelectorAll('.e-pdf').forEach(b=> b.onclick=()=>exportDailyPDF(b.dataset.id));
   main.querySelectorAll('.e-edit').forEach(b=> b.onclick=()=>{ resetEntryDraft(); state.editingEntryId=b.dataset.id; state.view='entry'; render(); });
   main.querySelectorAll('.e-del').forEach(b=> b.onclick=()=>{ if(confirm(t('confirm_delete'))){ state.entries = state.entries.filter(e=>e.id!==b.dataset.id); persistEntries(); renderHistory(); } });
 }
@@ -837,6 +909,33 @@ function exportCSV(){
   a.href = URL.createObjectURL(blob);
   a.download = `getrank-${todayStr()}.csv`;
   a.click();
+}
+function exportDailyPDF(entryId){
+  const e = state.entries.find(x=>x.id===entryId);
+  if(!e) return;
+  const exp = entryExpenseTotal(e);
+  const net = entryNet(e);
+  const target = document.getElementById('print-report-target') || (function(){
+    const d = document.createElement('div'); d.id='print-report-target'; d.className='print-only'; document.body.appendChild(d); return d;
+  })();
+  target.innerHTML = `
+    <div style="padding:20px;font-family:Cairo,sans-serif;">
+      <h1>getrank — ${t('daily_report')}</h1>
+      <p>${fmtDate(e.date)}</p>
+      <table border="1" cellpadding="6" style="border-collapse:collapse;margin-top:10px;font-size:14px;">
+        <tr><td><b>${t('income_of_day')}</b></td><td>${fmtMoney(e.income)}</td></tr>
+        <tr><td><b>${t('total_expenses_period')}</b></td><td>${fmtMoney(exp)}</td></tr>
+        <tr><td><b>${t('net_after_items')}</b></td><td>${fmtMoney(net)}</td></tr>
+      </table>
+      <h3 style="margin-top:20px;">${t('items_bought')}</h3>
+      ${(e.expenses&&e.expenses.length)? `
+      <table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:13px;">
+        <thead><tr><th>${t('item')}</th><th>${t('qty')}</th><th>${t('unit_price')}</th><th>${t('amount')}</th></tr></thead>
+        <tbody>${e.expenses.map(l=>`<tr><td>${escapeHtml(l.name)}</td><td>${l.qty}</td><td>${fmtMoney(l.unitPrice)}</td><td>${fmtMoney(l.amount)}</td></tr>`).join('')}</tbody>
+      </table>` : `<p>${t('no_items_today')}</p>`}
+      ${e.note? `<p style="margin-top:14px;"><b>${t('note')}:</b> ${escapeHtml(e.note)}</p>`:''}
+    </div>`;
+  window.print();
 }
 function exportPDF(){
   const rows = sortedEntries();
@@ -997,6 +1096,9 @@ async function boot(){
   document.getElementById('app-shell').style.display='flex';
   resetInactivity();
   render();
+  if(storageBackend==='memory'){
+    setTimeout(()=> toast(state.lang==='ar' ? 'تنبيه: التخزين غير متاح في هذا المتصفح، لن يتم حفظ البيانات' : (state.lang==='fr' ? "Avertissement : stockage indisponible, les données ne seront pas sauvegardées" : "Warning: storage unavailable, data won't be saved")), 600);
+  }
 }
 (async function init(){
   await loadAll();
