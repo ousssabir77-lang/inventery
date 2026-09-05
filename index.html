@@ -969,7 +969,7 @@ function renderExpenseLines(){
     input.onfocus=()=> showResults(input.value);
     input.oninput=()=>{ state.expenseDraft[idx].itemId=null; showResults(input.value); };
     input.onblur=()=> setTimeout(()=>{ results.style.display='none'; }, 150);
-    row.querySelector('.ex-qty').oninput=(e)=>{ state.expenseDraft[idx].qty=parseFloat(e.target.value)||0; renderExpenseLines(); updateNetPreview(); };
+    row.querySelector('.ex-qty').oninput=(e)=>{ state.expenseDraft[idx].qty=parseFloat(e.target.value)||0; recalcLine(idx); };
     row.querySelector('.ex-unit').onchange=(e)=>{ state.expenseDraft[idx].unit=e.target.value; renderExpenseLines(); updateNetPreview(); };
     row.querySelector('.ex-amount').oninput=(e)=>{ state.expenseDraft[idx].amount=parseFloat(e.target.value)||0; recalcLine(idx); };
     row.querySelector('.ex-remove').onclick=()=>{ state.expenseDraft.splice(idx,1); renderExpenseLines(); updateNetPreview(); };
