@@ -267,6 +267,7 @@ ar:{
   unit_price:"سعر الوحدة", amount:"المبلغ الإجمالي", note:"ملاحظة", note_ph:"سبب أي تغيّر غير عادي (اختياري)",
   unit:"الوحدة", unit_kg:"كيلو", unit_l:"لتر", unit_pcs:"حبة", computed_unit_price:"سعر الوحدة تلقائياً",
   net_result:"الصافي المحسوب", save_entry:"حفظ الإدخال", entry_saved:"تم حفظ الإدخال",
+  expense_pct_label:"نسبة السلع من المدخول",
   select_item:"اختر سلعة", no_items_yet:"لا توجد سلع بعد، أضفها من صفحة السلع أولاً",
   history_title:"سجل الأيام", search_ph:"ابحث بالتاريخ أو الملاحظة...", export_csv:"تصدير CSV",
   export_pdf:"تصدير PDF", col_date:"التاريخ", col_income:"الدخل", col_expenses:"المصاريف",
@@ -313,6 +314,7 @@ fr:{
   unit_price:"Prix unitaire", amount:"Montant total", note:"Note", note_ph:"Raison d'un changement inhabituel (optionnel)",
   unit:"Unité", unit_kg:"Kilo", unit_l:"Litre", unit_pcs:"Pièce", computed_unit_price:"Prix unitaire (calculé)",
   net_result:"Net calculé", save_entry:"Enregistrer", entry_saved:"Saisie enregistrée",
+  expense_pct_label:"Part des articles dans le revenu",
   select_item:"Choisir un article", no_items_yet:"Aucun article. Ajoutez-en d'abord depuis la page Articles",
   history_title:"Historique", search_ph:"Rechercher par date ou note...", export_csv:"Exporter CSV",
   export_pdf:"Exporter PDF", col_date:"Date", col_income:"Revenu", col_expenses:"Dépenses",
@@ -359,6 +361,7 @@ en:{
   unit_price:"Unit price", amount:"Total amount", note:"Note", note_ph:"Reason for any unusual change (optional)",
   unit:"Unit", unit_kg:"Kg", unit_l:"Liter", unit_pcs:"Piece", computed_unit_price:"Unit price (auto)",
   net_result:"Calculated net", save_entry:"Save entry", entry_saved:"Entry saved",
+  expense_pct_label:"Items as % of income",
   select_item:"Select item", no_items_yet:"No items yet, add them from the Items page first",
   history_title:"Daily log", search_ph:"Search by date or note...", export_csv:"Export CSV",
   export_pdf:"Export PDF", col_date:"Date", col_income:"Income", col_expenses:"Expenses",
@@ -691,7 +694,9 @@ function renderDashboard(){
     ${s.entries.length? `
     <div class="grid grid-4" style="margin-bottom:16px;">
       <div class="card stat-card"><span class="stat-label">${t('today_income')}</span><span class="stat-value">${fmtMoney(s.todayEntry?s.todayEntry.income:0)}</span></div>
-      <div class="card stat-card"><span class="stat-label">${t('today_expenses')}</span><span class="stat-value">${fmtMoney(s.todayEntry?entryExpenseTotal(s.todayEntry):0)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('today_expenses')}</span><span class="stat-value">${fmtMoney(s.todayEntry?entryExpenseTotal(s.todayEntry):0)}</span>
+        ${s.todayEntry && s.todayEntry.income>0 ? `<span class="stat-sub">${(entryExpenseTotal(s.todayEntry)/s.todayEntry.income*100).toFixed(1)}% ${t('expense_pct_label')}</span>`:''}
+      </div>
       <div class="card stat-card"><span class="stat-label">${t('today_net')}</span><span class="stat-value" style="color:${s.todayEntry && entryNet(s.todayEntry)<0?'var(--neg)':'var(--pos)'}">${fmtMoney(s.todayEntry?entryNet(s.todayEntry):0)}</span>
         ${s.todayEntry? `<button class="btn btn-ghost btn-sm" id="today-pdf" style="margin-top:6px;">&#128196; ${t('print_daily')}</button>`:''}
       </div>
@@ -845,9 +850,10 @@ function renderEntry(){
         <textarea id="f-note" rows="2" placeholder="${t('note_ph')}">${escapeHtml(noteVal)}</textarea>
       </div>
 
+      <span id="net-preview" style="display:none;"></span>
       <div class="card" style="background:var(--surface-2);display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
-        <span class="stat-label">${t('net_result')}</span>
-        <span class="stat-value" id="net-preview">${fmtMoney(0)}</span>
+        <span class="stat-label">${t('expense_pct_label')}</span>
+        <span class="stat-value" id="pct-preview" style="font-size:1.35rem;">0%</span>
       </div>
 
       <div style="display:flex;gap:10px;margin-top:16px;">
@@ -945,6 +951,12 @@ function updateNetPreview(){
   const net = income-expTotal;
   el.textContent = fmtMoney(net);
   el.style.color = net<0? 'var(--neg)':'var(--pos)';
+  const pctEl = document.getElementById('pct-preview');
+  if(pctEl){
+    const pct = income>0 ? (expTotal/income*100) : 0;
+    pctEl.textContent = pct.toFixed(1)+'%';
+    pctEl.style.color = pct>50 ? 'var(--neg)' : (pct>0 ? 'var(--accent)' : 'var(--text-muted)');
+  }
 }
 function saveEntry(){
   const date = document.getElementById('f-date').value || todayStr();
