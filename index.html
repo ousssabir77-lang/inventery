@@ -268,6 +268,11 @@ ar:{
   unit:"الوحدة", unit_kg:"كيلو", unit_l:"لتر", unit_pcs:"حبة", computed_unit_price:"سعر الوحدة تلقائياً",
   net_result:"الصافي المحسوب", save_entry:"حفظ الإدخال", entry_saved:"تم حفظ الإدخال",
   expense_pct_label:"نسبة السلع من المدخول",
+  nav_fund:"خزينة السلع", fund_title:"خزينة شراء السلع", fund_balance:"الرصيد الحالي",
+  add_funds:"إضافة مبلغ للخزينة", amount_to_add:"المبلغ", fund_note_ph:"ملاحظة (اختياري)",
+  fund_history:"سجل الإيداعات", no_fund_history:"لا يوجد إيداعات بعد", fund_added:"تمت إضافة المبلغ",
+  today_consumption:"استهلاك اليوم من الخزينة", consumption_pct:"نسبة الاستهلاك اليومي من الخزينة",
+  total_consumed:"إجمالي المستهلك", total_funded:"إجمالي ما تم إيداعه", fund_empty_warning:"رصيد الخزينة منخفض أو منتهٍ",
   select_item:"اختر سلعة", no_items_yet:"لا توجد سلع بعد، أضفها من صفحة السلع أولاً",
   history_title:"سجل الأيام", search_ph:"ابحث بالتاريخ أو الملاحظة...", export_csv:"تصدير CSV",
   export_pdf:"تصدير PDF", col_date:"التاريخ", col_income:"الدخل", col_expenses:"المصاريف",
@@ -315,6 +320,11 @@ fr:{
   unit:"Unité", unit_kg:"Kilo", unit_l:"Litre", unit_pcs:"Pièce", computed_unit_price:"Prix unitaire (calculé)",
   net_result:"Net calculé", save_entry:"Enregistrer", entry_saved:"Saisie enregistrée",
   expense_pct_label:"Part des articles dans le revenu",
+  nav_fund:"Caisse fournitures", fund_title:"Caisse d'achat des fournitures", fund_balance:"Solde actuel",
+  add_funds:"Ajouter un montant", amount_to_add:"Montant", fund_note_ph:"Note (optionnel)",
+  fund_history:"Historique des dépôts", no_fund_history:"Aucun dépôt pour l'instant", fund_added:"Montant ajouté",
+  today_consumption:"Consommation du jour", consumption_pct:"% de la caisse consommé aujourd'hui",
+  total_consumed:"Total consommé", total_funded:"Total déposé", fund_empty_warning:"Solde de la caisse faible ou épuisé",
   select_item:"Choisir un article", no_items_yet:"Aucun article. Ajoutez-en d'abord depuis la page Articles",
   history_title:"Historique", search_ph:"Rechercher par date ou note...", export_csv:"Exporter CSV",
   export_pdf:"Exporter PDF", col_date:"Date", col_income:"Revenu", col_expenses:"Dépenses",
@@ -362,6 +372,11 @@ en:{
   unit:"Unit", unit_kg:"Kg", unit_l:"Liter", unit_pcs:"Piece", computed_unit_price:"Unit price (auto)",
   net_result:"Calculated net", save_entry:"Save entry", entry_saved:"Entry saved",
   expense_pct_label:"Items as % of income",
+  nav_fund:"Supply fund", fund_title:"Supply purchase fund", fund_balance:"Current balance",
+  add_funds:"Add funds", amount_to_add:"Amount", fund_note_ph:"Note (optional)",
+  fund_history:"Deposit history", no_fund_history:"No deposits yet", fund_added:"Funds added",
+  today_consumption:"Today's consumption", consumption_pct:"% of fund consumed today",
+  total_consumed:"Total consumed", total_funded:"Total funded", fund_empty_warning:"Fund balance is low or depleted",
   select_item:"Select item", no_items_yet:"No items yet, add them from the Items page first",
   history_title:"Daily log", search_ph:"Search by date or note...", export_csv:"Export CSV",
   export_pdf:"Export PDF", col_date:"Date", col_income:"Income", col_expenses:"Expenses",
@@ -396,7 +411,7 @@ function t(key){ return (I18N[state.lang] && I18N[state.lang][key]) || I18N.en[k
 let state = {
   lang:'ar', authed:false, view:'dashboard',
   currency:'MAD', goal:0, theme:'dark',
-  catalog:[], suppliers:[], entries:[],
+  catalog:[], suppliers:[], entries:[], fundTopUps:[],
   editingEntryId:null, editingItemId:null, editingSupplierId:null,
   historySearch:'', expenseDraft:[],
 };
@@ -513,19 +528,35 @@ function syncLocalDefaults(){
   }catch(e){}
 }
 async function loadAll(){
-  const [settings,catalog,suppliers,entries] = await Promise.all([
+  const [settings,catalog,suppliers,entries,fund] = await Promise.all([
     storeGet('getrank:settings'), storeGet('getrank:catalog'),
-    storeGet('getrank:suppliers'), storeGet('getrank:entries')
+    storeGet('getrank:suppliers'), storeGet('getrank:entries'),
+    storeGet('getrank:fund')
   ]);
   if(settings){ state.lang=settings.lang||'ar'; state.currency=settings.currency||'MAD'; state.goal=settings.goal||0; state.theme=settings.theme||'dark'; }
   state.catalog = catalog||[];
   state.suppliers = suppliers||[];
   state.entries = entries||[];
+  state.fundTopUps = fund||[];
 }
 function persistSettings(){ storeSet('getrank:settings',{lang:state.lang,currency:state.currency,goal:state.goal,theme:state.theme}); }
 function persistCatalog(){ storeSet('getrank:catalog', state.catalog); }
 function persistSuppliers(){ storeSet('getrank:suppliers', state.suppliers); }
 function persistEntries(){ storeSet('getrank:entries', state.entries); }
+function persistFund(){ storeSet('getrank:fund', state.fundTopUps); }
+
+/* ---------------- Supply fund helpers ----------------
+   The fund is a separate money pool for buying items. It's funded by
+   manual top-ups and automatically drained by every day's item costs —
+   completely independent from daily income. */
+function fundTotalTopUps(){ return state.fundTopUps.reduce((s,f)=>s+(f.amount||0),0); }
+function fundTotalConsumed(){ return state.entries.reduce((s,e)=>s+entryExpenseTotal(e),0); }
+function fundBalance(){ return fundTotalTopUps()-fundTotalConsumed(); }
+function fundBalanceBefore(dateExclusive){
+  // Balance right before the given date's own consumption was deducted.
+  const consumedBefore = state.entries.reduce((s,e)=> e.date===dateExclusive? s : s+entryExpenseTotal(e), 0);
+  return fundTotalTopUps() - consumedBefore;
+}
 
 /* ---------------- Utils ---------------- */
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -598,6 +629,7 @@ const NAV = [
   {id:'dashboard', icon:'&#9737;', label:'nav_dashboard'},
   {id:'entry', icon:'&#10133;', label:'nav_entry'},
   {id:'history', icon:'&#128220;', label:'nav_history'},
+  {id:'fund', icon:'&#128176;', label:'nav_fund'},
   {id:'catalog', icon:'&#127838;', label:'nav_catalog'},
   {id:'suppliers', icon:'&#128222;', label:'nav_suppliers'},
   {id:'settings', icon:'&#9881;', label:'nav_settings'},
@@ -712,6 +744,13 @@ function renderDashboard(){
     </div>
 
     <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card stat-card"><span class="stat-label">&#128176; ${t('fund_balance')}</span><span class="stat-value" style="color:${fundBalance()<=0?'var(--neg)':'var(--pos)'}">${fmtMoney(fundBalance())}</span>
+        <button class="btn btn-ghost btn-sm" id="goto-fund" style="margin-top:6px;align-self:flex-start;">${t('nav_fund')}</button>
+      </div>
+      <div class="card stat-card"><span class="stat-label">${t('consumption_pct')}</span><span class="stat-value">${(function(){ const be=fundBalanceBefore(s.today); const te=s.todayEntry?entryExpenseTotal(s.todayEntry):0; const pct = be>0? (te/be*100) : (te>0?100:0); return pct.toFixed(1); })()}%</span></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:16px;">
       <div class="card">
         <div class="card-title">${t('net_over_time')}</div>
         <div class="chart-box"><canvas id="chart-net"></canvas></div>
@@ -757,6 +796,7 @@ function renderDashboard(){
   `;
 
   document.getElementById('quick-add') && (document.getElementById('quick-add').onclick=()=>{ state.view='entry'; render(); });
+  document.getElementById('goto-fund') && (document.getElementById('goto-fund').onclick=()=>{ state.view='fund'; render(); });
   document.getElementById('empty-add') && (document.getElementById('empty-add').onclick=()=>{ state.view='entry'; render(); });
   document.getElementById('today-pdf') && (document.getElementById('today-pdf').onclick=()=>exportDailyPDF(s.todayEntry.id));
 
@@ -1189,6 +1229,62 @@ function openSupplierModal(sp){
 }
 
 /* ---------------- Settings ---------------- */
+function renderFund(){
+  const main = document.getElementById('main');
+  const balance = fundBalance();
+  const today = todayStr();
+  const todayEntry = state.entries.find(e=>e.date===today);
+  const todayExp = todayEntry? entryExpenseTotal(todayEntry) : 0;
+  const balBefore = fundBalanceBefore(today);
+  const consumptionPct = balBefore>0 ? (todayExp/balBefore*100) : (todayExp>0? 100:0);
+  const history = [...state.fundTopUps].sort((a,b)=> a.date<b.date?1:-1);
+
+  main.innerHTML = `
+    <div class="topbar"><h2>${t('fund_title')}</h2></div>
+
+    ${balance<=0 ? `<div class="alert warn"><span class="alert-icon">&#9888;</span><span>${t('fund_empty_warning')}</span></div>` : ''}
+
+    <div class="grid grid-3" style="margin-bottom:16px;">
+      <div class="card stat-card"><span class="stat-label">${t('fund_balance')}</span><span class="stat-value" style="color:${balance<=0?'var(--neg)':'var(--pos)'}">${fmtMoney(balance)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('today_consumption')}</span><span class="stat-value">${fmtMoney(todayExp)}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('consumption_pct')}</span><span class="stat-value">${consumptionPct.toFixed(1)}%</span></div>
+    </div>
+
+    <div class="grid grid-2" style="margin-bottom:16px;">
+      <div class="card stat-card"><span class="stat-label">${t('total_funded')}</span><span class="stat-value" style="font-size:1.2rem;">${fmtMoney(fundTotalTopUps())}</span></div>
+      <div class="card stat-card"><span class="stat-label">${t('total_consumed')}</span><span class="stat-value" style="font-size:1.2rem;">${fmtMoney(fundTotalConsumed())}</span></div>
+    </div>
+
+    <div class="card" style="max-width:480px;margin-bottom:16px;">
+      <div class="card-title">${t('add_funds')}</div>
+      <div class="form-row">
+        <div class="field"><label>${t('amount_to_add')}</label><input type="number" step="0.01" id="fund-amount" placeholder="0.00"></div>
+      </div>
+      <div class="field"><label>${t('note')}</label><input type="text" id="fund-note" placeholder="${t('fund_note_ph')}"></div>
+      <button class="btn" id="fund-add-btn">+ ${t('add_funds')}</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">${t('fund_history')}</div>
+      ${history.length? `<div class="table-wrap"><table><thead><tr><th>${t('col_date')}</th><th>${t('amount')}</th><th>${t('note')}</th><th></th></tr></thead>
+        <tbody>${history.map(f=>`<tr><td>${fmtDate(f.date)}</td><td style="color:var(--pos);font-weight:700;">+${fmtMoney(f.amount)}</td><td>${escapeHtml(f.note||'')}</td>
+          <td><button class="icon-btn fund-del" data-id="${f.id}" title="${t('delete')}">&#128465;</button></td></tr>`).join('')}</tbody>
+      </table></div>` : `<div class="empty-state">${t('no_fund_history')}</div>`}
+    </div>
+  `;
+  document.getElementById('fund-add-btn').onclick=()=>{
+    const amount = parseFloat(document.getElementById('fund-amount').value)||0;
+    if(amount<=0) return;
+    const note = document.getElementById('fund-note').value.trim();
+    state.fundTopUps.push({id:uid(), date:todayStr(), amount, note});
+    persistFund();
+    toast(t('fund_added'));
+    renderFund();
+  };
+  main.querySelectorAll('.fund-del').forEach(b=> b.onclick=()=>{
+    if(confirm(t('confirm_delete'))){ state.fundTopUps = state.fundTopUps.filter(f=>f.id!==b.dataset.id); persistFund(); renderFund(); }
+  });
+}
 function renderSettings(){
   const main = document.getElementById('main');
   main.innerHTML = `
@@ -1235,6 +1331,7 @@ function render(){
   if(state.view==='dashboard') renderDashboard();
   else if(state.view==='entry') renderEntry();
   else if(state.view==='history') renderHistory();
+  else if(state.view==='fund') renderFund();
   else if(state.view==='catalog') renderCatalog();
   else if(state.view==='suppliers') renderSuppliers();
   else if(state.view==='settings') renderSettings();
