@@ -192,10 +192,9 @@ tr:last-child td{border-bottom:none;}
 
 .print-only{display:none;}
 @media print{
-  #sidebar,#mobile-nav,.topbar-actions,.no-print{display:none !important;}
-  #main{padding:0;}
+  body > *:not(#print-report-target){display:none !important;}
+  #print-report-target{display:block !important;}
   body{background:#fff;color:#000;}
-  .print-only{display:block;}
   .card{border:1px solid #ccc;box-shadow:none;}
 }
 
@@ -1082,7 +1081,6 @@ function renderHistory(){
         }).join('')}</tbody>
       </table></div>` : `<div class="empty-state">${t('no_entries')}</div>`}
     </div>
-    <div id="print-report-target" class="print-only"></div>
   `;
   document.getElementById('hist-search').oninput=(e)=>{ state.historySearch=e.target.value; renderHistory(); };
   document.getElementById('btn-csv').onclick=exportCSV;
@@ -1103,30 +1101,66 @@ function exportCSV(){
   a.download = `getrank-${todayStr()}.csv`;
   a.click();
 }
+function getPrintTarget(){
+  let target = document.getElementById('print-report-target');
+  if(!target){
+    target = document.createElement('div');
+    target.id = 'print-report-target';
+    target.className = 'print-only';
+    document.body.appendChild(target);
+  }
+  return target;
+}
 function exportDailyPDF(entryId){
   const e = state.entries.find(x=>x.id===entryId);
   if(!e) return;
   const exp = entryExpenseTotal(e);
   const net = entryNet(e);
-  const target = document.getElementById('print-report-target') || (function(){
-    const d = document.createElement('div'); d.id='print-report-target'; d.className='print-only'; document.body.appendChild(d); return d;
-  })();
+  const dir = I18N[state.lang].dir;
+  const target = getPrintTarget();
   target.innerHTML = `
-    <div style="padding:20px;font-family:Cairo,sans-serif;">
-      <h1>getrank — ${t('daily_report')}</h1>
-      <p>${fmtDate(e.date)}</p>
-      <table border="1" cellpadding="6" style="border-collapse:collapse;margin-top:10px;font-size:14px;">
-        <tr><td><b>${t('income_of_day')}</b></td><td>${fmtMoney(e.income)}</td></tr>
-        <tr><td><b>${t('total_expenses_period')}</b></td><td>${fmtMoney(exp)}</td></tr>
-        <tr><td><b>${t('net_after_items')}</b></td><td>${fmtMoney(net)}</td></tr>
-      </table>
-      <h3 style="margin-top:20px;">${t('items_bought')}</h3>
+    <div dir="${dir}" style="padding:24px;font-family:Cairo,sans-serif;color:#2A1D12;max-width:720px;margin:0 auto;">
+      <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #B5702A;padding-bottom:14px;margin-bottom:18px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#B5702A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;">g</div>
+        <div>
+          <div style="font-weight:800;font-size:1.3rem;">getrank</div>
+          <div style="color:#7C6A57;font-size:.85rem;">${t('daily_report')} — ${fmtDate(e.date)}</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:150px;background:#F3EBDD;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.75rem;color:#7C6A57;margin-bottom:4px;">${t('income_of_day')}</div>
+          <div style="font-size:1.15rem;font-weight:800;">${fmtMoney(e.income)}</div>
+        </div>
+        <div style="flex:1;min-width:150px;background:#F3EBDD;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.75rem;color:#7C6A57;margin-bottom:4px;">${t('total_expenses_period')}</div>
+          <div style="font-size:1.15rem;font-weight:800;">${fmtMoney(exp)}</div>
+        </div>
+        <div style="flex:1;min-width:150px;background:#F3EBDD;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.75rem;color:#7C6A57;margin-bottom:4px;">${t('net_after_items')}</div>
+          <div style="font-size:1.15rem;font-weight:800;color:${net<0?'#B5432F':'#3E8A55'};">${fmtMoney(net)}</div>
+        </div>
+      </div>
+
+      <h3 style="font-size:1rem;margin-bottom:10px;">${t('items_bought')}</h3>
       ${(e.expenses&&e.expenses.length)? `
-      <table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;font-size:13px;">
-        <thead><tr><th>${t('item')}</th><th>${t('qty')}</th><th>${t('unit_price')}</th><th>${t('amount')}</th></tr></thead>
-        <tbody>${e.expenses.map(l=>`<tr><td>${escapeHtml(l.name)}</td><td>${l.qty}</td><td>${fmtMoney(l.unitPrice)}</td><td>${fmtMoney(l.amount)}</td></tr>`).join('')}</tbody>
-      </table>` : `<p>${t('no_items_today')}</p>`}
-      ${e.note? `<p style="margin-top:14px;"><b>${t('note')}:</b> ${escapeHtml(e.note)}</p>`:''}
+      <table style="border-collapse:collapse;width:100%;font-size:.85rem;">
+        <thead>
+          <tr style="background:#B5702A;color:#fff;">
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('item')}</th>
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('qty')}</th>
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('amount')}</th>
+          </tr>
+        </thead>
+        <tbody>${e.expenses.map((l,i)=>`<tr style="background:${i%2? '#FBF7F0':'#fff'};">
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;">${escapeHtml(l.name)}</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;">${l.qty} ${t(l.unit||'unit_pcs')}</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;font-weight:700;">${fmtMoney(l.amount)}</td>
+          </tr>`).join('')}</tbody>
+      </table>` : `<p style="color:#7C6A57;">${t('no_items_today')}</p>`}
+      ${e.note? `<p style="margin-top:16px;padding:10px 14px;background:#F3EBDD;border-radius:8px;"><b>${t('note')}:</b> ${escapeHtml(e.note)}</p>`:''}
+      <p style="margin-top:24px;color:#B0A28F;font-size:.72rem;text-align:center;">getrank — ${t('generated_on')} ${fmtDate(todayStr())}</p>
     </div>`;
   window.print();
 }
@@ -1135,16 +1169,54 @@ function exportPDF(){
   const totalIncome = rows.reduce((s,e)=>s+(e.income||0),0);
   const totalExp = rows.reduce((s,e)=>s+entryExpenseTotal(e),0);
   const netAll = totalIncome-totalExp;
-  const target = document.getElementById('print-report-target');
+  const dir = I18N[state.lang].dir;
+  const target = getPrintTarget();
   target.innerHTML = `
-    <div style="padding:20px;font-family:Cairo,sans-serif;">
-      <h1>getrank — ${t('monthly_report')}</h1>
-      <p>${t('generated_on')}: ${fmtDate(todayStr())}</p>
-      <p>${t('total_income_period')}: ${fmtMoney(totalIncome)} | ${t('total_expenses_period')}: ${fmtMoney(totalExp)} | ${t('net_period')}: ${fmtMoney(netAll)} | ${t('entries_count')}: ${rows.length}</p>
-      <table border="1" cellpadding="6" style="border-collapse:collapse;width:100%;margin-top:12px;font-size:13px;">
-        <thead><tr><th>${t('col_date')}</th><th>${t('col_income')}</th><th>${t('col_expenses')}</th><th>${t('col_net')}</th><th>${t('note')}</th></tr></thead>
-        <tbody>${rows.map(e=>`<tr><td>${fmtDate(e.date)}</td><td>${fmtMoney(e.income)}</td><td>${fmtMoney(entryExpenseTotal(e))}</td><td>${fmtMoney(entryNet(e))}</td><td>${escapeHtml(e.note||'')}</td></tr>`).join('')}</tbody>
+    <div dir="${dir}" style="padding:24px;font-family:Cairo,sans-serif;color:#2A1D12;max-width:820px;margin:0 auto;">
+      <div style="display:flex;align-items:center;gap:12px;border-bottom:3px solid #B5702A;padding-bottom:14px;margin-bottom:18px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:#B5702A;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;">g</div>
+        <div>
+          <div style="font-weight:800;font-size:1.3rem;">getrank</div>
+          <div style="color:#7C6A57;font-size:.85rem;">${t('monthly_report')} — ${t('generated_on')} ${fmtDate(todayStr())}</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;background:#F3EBDD;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.72rem;color:#7C6A57;margin-bottom:4px;">${t('total_income_period')}</div>
+          <div style="font-size:1.1rem;font-weight:800;">${fmtMoney(totalIncome)}</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:#F3EBDD;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.72rem;color:#7C6A57;margin-bottom:4px;">${t('total_expenses_period')}</div>
+          <div style="font-size:1.1rem;font-weight:800;">${fmtMoney(totalExp)}</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:#F3EBDD;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.72rem;color:#7C6A57;margin-bottom:4px;">${t('net_period')}</div>
+          <div style="font-size:1.1rem;font-weight:800;color:${netAll<0?'#B5432F':'#3E8A55'};">${fmtMoney(netAll)}</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:#F3EBDD;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:.72rem;color:#7C6A57;margin-bottom:4px;">${t('entries_count')}</div>
+          <div style="font-size:1.1rem;font-weight:800;">${rows.length}</div>
+        </div>
+      </div>
+      <table style="border-collapse:collapse;width:100%;font-size:.85rem;">
+        <thead>
+          <tr style="background:#B5702A;color:#fff;">
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('col_date')}</th>
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('col_income')}</th>
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('col_expenses')}</th>
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('col_net')}</th>
+            <th style="padding:8px 10px;text-align:${dir==='rtl'?'right':'left'};">${t('note')}</th>
+          </tr>
+        </thead>
+        <tbody>${rows.map((e,i)=>`<tr style="background:${i%2?'#FBF7F0':'#fff'};">
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;">${fmtDate(e.date)}</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;">${fmtMoney(e.income)}</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;">${fmtMoney(entryExpenseTotal(e))}</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;font-weight:700;">${fmtMoney(entryNet(e))}</td>
+            <td style="padding:8px 10px;border-bottom:1px solid #E4D8C4;">${escapeHtml(e.note||'')}</td>
+          </tr>`).join('')}</tbody>
       </table>
+      <p style="margin-top:20px;color:#B0A28F;font-size:.72rem;text-align:center;">getrank</p>
     </div>`;
   window.print();
 }
