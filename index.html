@@ -273,6 +273,7 @@ ar:{
   fund_history:"سجل الإيداعات", no_fund_history:"لا يوجد إيداعات بعد", fund_added:"تمت إضافة المبلغ",
   today_consumption:"استهلاك اليوم من الخزينة", consumption_pct:"نسبة الاستهلاك اليومي من الخزينة",
   total_consumed:"إجمالي المستهلك", total_funded:"إجمالي ما تم إيداعه", fund_empty_warning:"رصيد الخزينة منخفض أو منتهٍ",
+  retry:"إعادة المحاولة",
   select_item:"اختر سلعة", no_items_yet:"لا توجد سلع بعد، أضفها من صفحة السلع أولاً",
   history_title:"سجل الأيام", search_ph:"ابحث بالتاريخ أو الملاحظة...", export_csv:"تصدير CSV",
   export_pdf:"تصدير PDF", col_date:"التاريخ", col_income:"الدخل", col_expenses:"المصاريف",
@@ -325,6 +326,7 @@ fr:{
   fund_history:"Historique des dépôts", no_fund_history:"Aucun dépôt pour l'instant", fund_added:"Montant ajouté",
   today_consumption:"Consommation du jour", consumption_pct:"% de la caisse consommé aujourd'hui",
   total_consumed:"Total consommé", total_funded:"Total déposé", fund_empty_warning:"Solde de la caisse faible ou épuisé",
+  retry:"Réessayer",
   select_item:"Choisir un article", no_items_yet:"Aucun article. Ajoutez-en d'abord depuis la page Articles",
   history_title:"Historique", search_ph:"Rechercher par date ou note...", export_csv:"Exporter CSV",
   export_pdf:"Exporter PDF", col_date:"Date", col_income:"Revenu", col_expenses:"Dépenses",
@@ -377,6 +379,7 @@ en:{
   fund_history:"Deposit history", no_fund_history:"No deposits yet", fund_added:"Funds added",
   today_consumption:"Today's consumption", consumption_pct:"% of fund consumed today",
   total_consumed:"Total consumed", total_funded:"Total funded", fund_empty_warning:"Fund balance is low or depleted",
+  retry:"Retry",
   select_item:"Select item", no_items_yet:"No items yet, add them from the Items page first",
   history_title:"Daily log", search_ph:"Search by date or note...", export_csv:"Export CSV",
   export_pdf:"Export PDF", col_date:"Date", col_income:"Income", col_expenses:"Expenses",
@@ -432,8 +435,19 @@ function loadScript(src){
 }
 function delay(ms){ return new Promise(res=>setTimeout(res,ms)); }
 
-const chartJsPromise = loadScript('https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js')
-  .catch(e=>{ console.error('Chart.js failed to load', e); });
+const CHART_CDN_URLS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js',
+  'https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js',
+  'https://unpkg.com/chart.js@4.4.4/dist/chart.umd.min.js'
+];
+async function loadChartJs(){
+  for(const url of CHART_CDN_URLS){
+    try{ await loadScript(url); if(typeof Chart!=='undefined') return true; }
+    catch(e){ console.error('Chart.js mirror failed:', url, e); }
+  }
+  return false;
+}
+const chartJsPromise = loadChartJs();
 
 const firebaseConfig = {
   apiKey: "AIzaSyAn5-SF8nqhqauhBcEf6KaOKvzdjVvoSiM",
@@ -802,7 +816,16 @@ function renderDashboard(){
 
   if(s.entries.length){
     if(typeof Chart==='undefined'){
-      chartJsPromise.then(()=>{ if(state.view==='dashboard' && typeof Chart!=='undefined') renderDashboard(); });
+      const netBox = document.getElementById('chart-net'); const netParent = netBox && netBox.parentElement;
+      chartJsPromise.then((ok)=>{
+        if(state.view!=='dashboard') return;
+        if(typeof Chart!=='undefined'){ renderDashboard(); }
+        else if(netParent){
+          netParent.innerHTML = `<div class="empty-state" style="padding:20px 10px;">${t('low_data')}<br><button class="btn btn-ghost btn-sm" id="retry-chart" style="margin-top:10px;">&#8635; ${t('retry')}</button></div>`;
+          const retryBtn = document.getElementById('retry-chart');
+          if(retryBtn) retryBtn.onclick=()=>{ window.location.reload(); };
+        }
+      });
     } else {
       drawNetChart(s.entries);
       if(s.topExpenses.length) drawPieChart(s.topExpenses);
